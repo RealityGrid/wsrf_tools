@@ -26,7 +26,8 @@ int main(int argc, char **argv){
 
   for(i=0; i<num_entries; i++){
     printf("Entry %d:\n", i);
-    printf("          GSH: %s\n", entries[i].gsh);
+    printf("          EPR: %s\n", entries[i].gsh);
+    printf("    Entry EPR: %s\n", entries[i].entry_gsh);
     printf("          App: %s\n", entries[i].application);
     printf("         user: %s, %s\n", entries[i].user, entries[i].group);
     printf("   Start time: %s\n", entries[i].start_date_time);
