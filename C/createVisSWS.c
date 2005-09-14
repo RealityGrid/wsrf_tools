@@ -4,7 +4,7 @@
 #include "ReG_Steer_Common.h"
 #include "ReG_Steer_Browser.h"
 #include "ReG_Steer_XML.h"
-#include "ReG_Steer_Utils_WSRF.h"
+#include "ReG_Steer_Utils.h"
 #include "soapH.h"
 
 /*------------------------------------------------------------*/
@@ -117,9 +117,11 @@ int main(int argc, char **argv){
 
   /* Now create SWS for the vis */
 
-  if( !(EPR = Create_SWS(lifetime, containerAddr, registryAddr,
-			 username, group, application,
-			 purpose, "")) ){
+  if( !(EPR = Create_steering_service(lifetime, 
+				      containerAddr, registryAddr,
+				      username, group, application,
+				      purpose, "", /* name of input file */
+				      "")) ){ /* chkpoint GSH to restart from */
     printf("FAILED to create SWS for %s :-(\n", application);
     return 1;
   }

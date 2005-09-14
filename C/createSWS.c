@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "ReG_Steer_types.h"
 #include "ReG_Steer_Browser.h"
-#include "ReG_Steer_Utils_WSRF.h"
+#include "ReG_Steer_Utils.h"
 
 /*------------------------------------------------------------*/
 
@@ -36,10 +36,11 @@ int main(int argc, char **argv){
     strncpy(checkpointEPR, argv[6], 256);
   }
 
-  EPR = Create_SWS(lifetime, containerAddr, registryAddr,
-		   username, group, application,
-		   purpose, checkpointEPR);
-
+  EPR = Create_steering_service(lifetime, containerAddr, registryAddr,
+				username, group, application,
+				purpose, 
+				"", /* name of input file */
+				checkpointEPR);
   if(EPR){
     printf("Address of SWS = %s\n", EPR);
   }
