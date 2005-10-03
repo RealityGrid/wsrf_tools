@@ -113,7 +113,7 @@ my $launch_time = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
 #chomp($run_time);
 #print "\n";
 # ARPDBG - hardwire run_time to 60 for now
-my $run_time = 60;
+my $run_time = 180;
 my @childNames = ();
 
 for(my $i=0; $i < $numChildren; $i++){
