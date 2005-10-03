@@ -4,10 +4,10 @@ BEGIN {
        @INC = ( @INC, $ENV{WSRF_LOCATION} );
 };
 
-#use SOAP::Lite +trace =>  debug => sub {};
-use SOAP::Lite;
-#use WSRF::Lite +trace =>  debug => sub {};
-use WSRF::Lite;
+use SOAP::Lite +trace =>  debug => sub {};
+#use SOAP::Lite;
+use WSRF::Lite +trace =>  debug => sub {};
+#use WSRF::Lite;
 use strict;
 
 #need to point to users certificates - these are only used
@@ -84,14 +84,21 @@ for my $t ($ans->valueof("//".$prop_name."/registryEntry/componentContent")) {
 for (my $i=0; $i < @{entryContent}; $i++){
     my $type = $serviceTypes[$i]; 
     my $content = $entryContent[$i];
-    print "Entry $i: $type \"$content\"\n";
-    if($type ne "ServiceGroup"){
+    print "\nEntry $i: $type \"$content\"\n";
+    if($type eq "SWS"){
 	print "         User: $userNames[$i]\n";
         print "         Time: $startTimes[$i]\n";
 	print "     SWS addr: $swsEPRs[$i]\n";
 	print "   Entry addr: $serviceGroupEPRs[$i]\n";
     }
-
+    elsif($type eq "ServiceGroup"){
+	print "Registry addr: $swsEPRs[$i]\n";
+	print "   Entry addr: $serviceGroupEPRs[$i]\n";
+    }
+    elsif($type eq "SWSFactory"){
+        print " Factory addr: $swsEPRs[$i]\n";
+	print "   Entry addr: $serviceGroupEPRs[$i]\n";
+    }
 }
 
 print "\n";
