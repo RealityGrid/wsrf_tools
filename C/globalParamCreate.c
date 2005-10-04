@@ -9,16 +9,15 @@
 
 int main(int argc, char **argv){
 
-  char *parentEPR;
-  char *paramDefs;
-  char *pchar;
-  char *pend;
-  char *childrenTxt;
-  char *appName;
-  struct soap mySoap;
-  struct msg_struct *msg;
+  char                *parentEPR;
+  char                *paramDefs;
+  char                *pchar;
+  char                *pend;
+  char                *childrenTxt;
+  char                *appName;
+  struct soap          mySoap;
+  struct msg_struct   *msg;
   struct param_struct *param_ptr;
-  struct param_struct *tmp_ptr;
   const int            MAX_CHILDREN = 10;
   char                 childEPR[MAX_CHILDREN][256];
   char                 paramSet[MAX_CHILDREN][256];
@@ -28,8 +27,7 @@ int main(int argc, char **argv){
   char                 couplingConfig[1024*1024];
   int                  count;
   int                  childParamCount[MAX_CHILDREN];
-  int  numInSet;
-  int  i, j;
+  int                  i, j, numInSet;
   struct wsrp__SetResourcePropertiesResponse response;
 
   if( argc != 2 ){
