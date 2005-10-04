@@ -25,13 +25,13 @@ int main(int argc, char **argv){
   }
 
   for(i=0; i<num_entries; i++){
-    printf("Entry %d:\n", i);
-    printf("          EPR: %s\n", entries[i].gsh);
-    printf("    Entry EPR: %s\n", entries[i].entry_gsh);
-    printf("          App: %s\n", entries[i].application);
-    printf("         user: %s, %s\n", entries[i].user, entries[i].group);
-    printf("   Start time: %s\n", entries[i].start_date_time);
-    printf("  Description: %s\n", entries[i].job_description);
+    printf("Entry %d - type: %s\n", i, entries[i].service_type);
+    printf("           EPR: %s\n", entries[i].gsh);
+    printf("     Entry EPR: %s\n", entries[i].entry_gsh);
+    printf("           App: %s\n", entries[i].application);
+    printf("          user: %s, %s\n", entries[i].user, entries[i].group);
+    printf("    Start time: %s\n", entries[i].start_date_time);
+    printf("   Description: %s\n\n", entries[i].job_description);
   }
   free(entries);
   return 0;
