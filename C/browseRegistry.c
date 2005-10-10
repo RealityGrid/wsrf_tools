@@ -12,16 +12,29 @@ int main(int argc, char **argv){
   int    num_entries;
   struct registry_entry *entries;
 
-  if(argc != 2){
-    printf("Usage:\n  browseRegistry <EPR of Registry (ServiceGroup)>\n");
+  if(argc < 2 || argc > 3){
+    printf("Usage:\n  browseRegistry <EPR of Registry "
+	   "(ServiceGroup)> [<pattern to filter on>]\n");
     return 1;
   }
   strncpy(registryEPR, argv[1], 128);
 
-  if(Get_registry_entries(registryEPR, &num_entries,  
-			  &entries) != REG_SUCCESS){
-    printf("Get_registry_entries failed\n");
-    return 1;
+  if(argc != 3){
+
+    if(Get_registry_entries(registryEPR, &num_entries,  
+			    &entries) != REG_SUCCESS){
+      printf("Get_registry_entries failed\n");
+      return 1;
+    }
+  }
+  else{
+
+    if(Get_registry_entries_filtered(registryEPR, &num_entries,  
+				     &entries,
+				     argv[2]) != REG_SUCCESS){
+      printf("Get_registry_entries_filtered failed\n");
+      return 1;
+    }
   }
 
   for(i=0; i<num_entries; i++){
