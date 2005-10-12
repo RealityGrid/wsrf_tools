@@ -5,6 +5,7 @@
 #include "ReG_Steer_Utils.h"
 #include "ReG_Steer_Common.h"
 #include "ReG_Steer_XML.h"
+#include "ReG_Steer_Steerside_WSRF.h"
 #include "soapH.h"
 
 int main(int argc, char **argv){

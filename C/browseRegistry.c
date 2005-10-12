@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <ReG_Steer_Steerside.h>
 #include <ReG_Steer_Browser.h>
 /*------------------------------------------------------------*/
@@ -7,8 +8,6 @@ int main(int argc, char **argv){
 
   char   registryEPR[128];
   int    i;
-  int    status;
-  char  *out1;
   int    num_entries;
   struct registry_entry *entries;
 

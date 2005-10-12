@@ -1,7 +1,7 @@
 CC = gcc
-C_FLAGS = -g
+C_FLAGS = -g -Wall
 INCLUDE_PATH = -I/usr/include/libxml2 -I${REG_STEER_HOME}/include
-LIB_FLAGS = -L${REG_STEER_HOME}/lib32 -lReG_Steer_Utils -lReG_Steer -lxml2 -lm -lz
+LIB_FLAGS = -L${REG_STEER_HOME}/lib32 -lReG_Steer -lReG_Steer_Utils -lxml2 -lm -lz
 
 .SUFFIXES: .o .c
 
