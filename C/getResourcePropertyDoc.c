@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#define WITH_CDATA /* To ensure gSoap retains CDATA sections */
 #include "soapH.h"
 #include "ReG_Steer_types.h"
 #include "ReG_Steer_Steerside_WSRF.h"
