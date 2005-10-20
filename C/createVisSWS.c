@@ -30,20 +30,94 @@ int main(int argc, char **argv){
   xmlNodePtr cur;
   struct io_struct *ioPtr;
   int               i, count;
+  int               num_entries;
+  struct registry_entry *entries;
 
-  if(argc != 7){
-    printf("Usage:\n  createVisSWS <address of container> <address of registry>"
-	   "<EPR of data source> <runtime (min)> <application> <purpose>\n");
+  if(argc != 5){
+    printf("Usage:\n  createVisSWS <address of registry> "
+	   "<runtime (min)> <application> <purpose>\n");
     return 1;
   }
 
-  strncpy(containerAddr, argv[1], 256);
-  strncpy(registryAddr, argv[2], 256);
-  strncpy(dataSource, argv[3], 256);
-  sscanf(argv[4], "%d", &lifetime);
-  strncpy(application, argv[5], 256);
-  strncpy(purpose, argv[6], 1024);
+  strncpy(registryAddr, argv[1], 256);
+  sscanf(argv[2], "%d", &lifetime);
+  strncpy(application, argv[3], 256);
+  strncpy(purpose, argv[4], 1024);
   username = getenv("USER");
+
+  /* Get the list of available Containers and ask the user to 
+     choose one */
+  if(Get_registry_entries_filtered(registryAddr, &num_entries,  
+				   &entries,
+				   "Container registry") != REG_SUCCESS){
+    fprintf(stderr, 
+	    "Search for registry of available containers failed\n");
+    return 1;
+  }
+
+  if(num_entries != 1){
+    fprintf(stderr, "Search for registry of available containers failed: "
+	    "returned %d entries\n", num_entries);
+    return 1;
+  }
+
+  strcpy(containerAddr, entries[0].gsh);
+  free(entries);
+  if(Get_registry_entries_filtered(containerAddr, &num_entries,  
+				   &entries,
+				   "Container") != REG_SUCCESS){
+    fprintf(stderr, "Search for available containers failed\n");
+    return 1;
+  }
+
+  if(num_entries == 0){
+    fprintf(stderr, "No containers available :-(\n");
+    return 1;
+  }
+
+  fprintf(stdout, "Available containers:\n");
+  for(i=0; i<num_entries; i++){
+    if( !strcmp(entries[i].service_type, "Container") ){
+      fprintf(stdout, "  %d: EPR: %s\n", i, entries[i].gsh);
+    }
+  }
+  printf("\nEnter container to use [0-%d]: ",num_entries-1);
+  while(1){
+    if((scanf("%d", &count) == 1) && 
+       (count > -1 && count < num_entries))break;
+    fprintf(stderr, "\nInvalid choice, please select container: ");
+  }
+  strcpy(containerAddr, entries[count].gsh);
+  free(entries);
+
+  /* Look for available SWSs and get user to choose which one to
+     use as a data source */
+  if(Get_registry_entries_filtered(registryAddr, &num_entries,  
+				   &entries,
+				   "SWS") != REG_SUCCESS){
+    fprintf(stderr, "\nNo jobs to use as data source found in registry!\n");
+    return 1;
+  }
+  printf("\nAvailable jobs:\n");
+  for(i=0; i<num_entries; i++){
+    if( !strcmp(entries[i].service_type, "SWS") ){
+      printf("  %d:      EPR: %s\n", i, entries[i].gsh);
+      printf("           App: %s\n", entries[i].application);
+      printf("          user: %s, %s\n", entries[i].user, entries[i].group);
+      printf("    Start time: %s\n", entries[i].start_date_time);
+      printf("   Description: %s\n\n", entries[i].job_description);
+    }
+  }
+  fprintf(stdout, "Select job to use as data source [0-%d]: ",
+	  num_entries-1);
+  while(1){
+    if((scanf("%d", &count) == 1) && 
+       (count > -1 && count < num_entries))break;
+    fprintf(stderr, "\nInvalid choice, please select job [0-%d]: ", 
+	    num_entries-1);
+  }
+  strncpy(dataSource, entries[count].gsh, 256);
+  free(entries);
 
   /* Obtain the IOTypes from the data source */
   soap_init(&mySoap);
@@ -52,12 +126,10 @@ int main(int argc, char **argv){
 			     "ioTypeDefinitions",
 			     &ioTypes) != REG_SUCCESS ){
 
-    printf("Call to get ioTypeDefinitions ResourceProperty on %s failed\n",
-	   dataSource);
+    fprintf(stderr, "Call to get ioTypeDefinitions ResourceProperty on "
+	    "%s failed\n", dataSource);
     return 1;
   }
-
-  printf("Got ioTypeDefinitions >>%s<<\n", ioTypes);
 
   if( !(doc = xmlParseMemory(ioTypes, strlen(ioTypes))) ||
       !(cur = xmlDocGetRootElement(doc)) ){
@@ -80,26 +152,25 @@ int main(int argc, char **argv){
   msg = New_msg_struct();
   msg->io_def = New_io_def_struct();
   parseIOTypeDef(doc, ns, cur, msg->io_def);
-  Print_msg(msg);
 
   if(!(ioPtr = msg->io_def->first_io) ){
     fprintf(stderr, "Got no IOType definitions from data source\n");
     return 1;
   }
   i = 0;
-  printf("Available IOTypes:\n");
+  fprintf(stdout, "Available IOTypes:\n");
   while(ioPtr){
     if( !xmlStrcmp(ioPtr->direction, (const xmlChar *)"OUT") ){
-      printf("  %d: %s\n", i++, (char *)ioPtr->label);
+      fprintf(stdout, "  %d: %s\n", i++, (char *)ioPtr->label);
     }
     ioPtr = ioPtr->next;
   }
   count = i-1;
-  printf("Enter IOType to use as data source (0-%d): ", count);
+  fprintf(stdout, "\nEnter IOType to use as data source [0-%d]: ", count);
   while(1){
     if(scanf("%d", &i) == 1)break;
   }
-  printf("\n");
+  fprintf(stdout, "\n");
 
   count = 0; ioPtr = msg->io_def->first_io;
   while(ioPtr){
@@ -126,17 +197,18 @@ int main(int argc, char **argv){
     return 1;
   }
 
+  fprintf(stdout, "Address of SWS = %s\n", EPR);
+
   /* Finally, set it up with information on the data source*/
 
   snprintf(purpose, 1024, "<dataSource><sourceEPR>%s</sourceEPR>"
 	   "<sourceLabel>%s</sourceLabel></dataSource>",
 	   dataSource, iodef_label);
 
-  printf("Calling SetResourceProperties with >>%s<<\n",
-	 purpose);
   if(soap_call_wsrp__SetResourceProperties(&mySoap, EPR, 
 					   "", purpose, &response) != SOAP_OK){
     soap_print_fault(&mySoap, stderr);
+    fprintf(stderr, "Failed to initialize SWS with info. on data source :-(");
     return 1;
   }
 
