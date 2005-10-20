@@ -1,0 +1,73 @@
+The directory containing this README should contain the source code for
+a number of utilities for use with the WSRF-based version of the
+RealityGrid steering library (www.realitygrid.org and 
+www.sve.man.ac.uk/Research/AtoZ/RealityGrid/).
+
+--------------------------------------------------------------------
+To build:
+
+You'll need the RealityGrid steering library installed somewhere
+on your machine.
+
+Ensure that the REG_STEER_HOME environment variable holds the path to the
+steering library, e.g. ${HOME}/reg_steer_lib.
+(In bash:
+	export REG_STEER_HOME=${HOME}/reg_steer_lib 
+and in (t)csh:
+	setenv REG_STEER_HOME ${HOME}/reg_steer_lib
+.)
+
+The Makefile is set up to use gcc.  If you're using some other compiler
+you'll need to change it.
+
+Type 'make'...
+
+--------------------------------------------------------------------
+The utilities:
+
+browseRegistry
+
+  Usage:
+    browseRegistry <EPR of Registry (ServiceGroup)> [<pattern to filter on>]
+
+  Browse a specified registry (WSRF ServiceGroup)...
+
+createSWS
+
+  Usage:
+    createSWS <address of registry> <lifetime (min)> <application> <purpose> [checkpoint EPR]
+
+  Create a Steering Web Service.  This takes four mandatory arguments
+  (address of the 'top level registry', run-time of the job in minutes,
+  the name of the application being run and some [quoted] text
+  describing its purpose) and one optional argument (the EPR of the node in
+  a checkpoint tree from which the job is being restarted).
+
+createVisSWS
+
+  As for createSWS but for use when the associated app. is a visualization
+  and thus must be supplied with a data source.
+
+destroySWS
+
+  Usage:
+    destroySWS <EPR of SWS 1> [<EPR of SWS 2>...]
+
+  Destroys one or more specified SWSs.
+
+globalParamCreate
+
+  Usage: 
+    globalParamCreate <EPR of parent>
+
+  Use to create 'global' steered parameters for a steered couple model.  
+  Takes a single argument consisting of the EPR of the parent SWS representing
+  the complete coupled model.  This SWS is interrogated to get the EPRs of
+  its children and its parameter defintions.  These parameters are
+  then displayed to the user who can choose which to link together in order 
+  to create a 'global' parameter.  Once done, the definitions of the global 
+  parameters are passed back to the parent EPR.
+
+  N.B. This requires that the parent SWS have the parameter definitions from
+  all of its children which in turn requires that all the children be up
+  and running before this tool is used. 
