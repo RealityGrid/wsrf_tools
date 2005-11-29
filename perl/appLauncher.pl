@@ -5,9 +5,18 @@ BEGIN {
 };
 
 use LWP::Simple;
-use WSRF::Lite +trace =>  debug => sub {};
-#use WSRF::Lite;
+#use WSRF::Lite +trace =>  debug => sub {};
+use WSRF::Lite;
+use MIME::Base64;
+use Digest::SHA1 qw(sha1 sha1_hex sha1_base64);;
 use strict;
+
+#need to point to user's certificates - these are only used
+#if https protocal is being used.
+$ENV{HTTPS_CA_DIR} = "/etc/grid-security/certificates/";
+$ENV{HTTPS_CERT_FILE} = $ENV{HOME}."/.globus/usercert.pem";
+$ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
+
 
 if( @ARGV > 1  )
 {
@@ -55,17 +64,17 @@ print "Available containers:\n";
 for($i=0; $i<@{containers}; $i++){
     print "    $i: $containers[$i]\n";
     # ARPDBG - hardwire for now 
-    if($containers[$i] =~ m/methuselah/){
-      last;
-    }
+    #if($containers[$i] =~ m/methuselah/){
+    #  last;
+    #}
 }
-#$i = -1;
-#my $max_container = @{containers} - 1;
-#while ($i < 0 || $i > $max_container) {
-#    print "Which container do you want to use (0 - $max_container): ";
-#    $i = <STDIN>;
-#    print "\n";
-#}
+$i = -1;
+my $max_container = @{containers} - 1;
+while ($i < 0 || $i > $max_container) {
+    print "Which container do you want to use (0 - $max_container): ";
+    $i = <STDIN>;
+    print "\n";
+}
 
 my $myContainer = $containers[$i];
 
@@ -135,25 +144,34 @@ my $timeToLive = 24*60;
 
 #print "Enter EPR for starting checkpoint (hit Return for none): ";
 #my $chkEPR = <STDIN>;
+#print "\n";
 my $chkEPR = '\n';
+
+print "Enter a passphrase to protect the SWS: ";
+my $passphrase = <STDIN>;
+chomp($passphrase);
 print "\n";
+#my $passphrase = "somethingcunning";
 
 # Set the location of the service
 my $target = $myContainer . "Session/SWSFactory/SWSFactory";
 # Set the namespace of the service
 my $uri = "http://www.sve.man.ac.uk/SWSFactory";
 
-# Name of function to be called
-my $func = "createSWSResource";
+print "Calling createSWSResource on $target...\n";
 
 # This call returns a SOM object
 my $ans =  WSRF::Lite
          -> uri($uri)
          -> wsaddress(WSRF::WS_Address->new()->Address($target)) #location of service
-         -> $func($timeToLive, $registry_EPR, SOAP::Data->value($job_description)->type('string'), 
-		  $chkEPR);
+         -> createSWSResource($timeToLive, $registry_EPR, 
+			      SOAP::Data->value($job_description)->type('string'), 
+			      $chkEPR,
+			      $passphrase);
 
-if ($ans->fault) {  die "CREATE ERROR:: ".$ans->faultcode." ".
+die "createSWSResource call did not return anything" if !defined($ans);
+
+if ($ans->fault) {  die "createSWSResource ERROR:: ".$ans->faultcode." ".
 			$ans->faultstring."\n"; }
 
 # Check we got a WS-Address EndPoint back
@@ -193,10 +211,44 @@ else{
              "]]></inputFileContent></wsrp:Insert>";
 }
 
+#print "uri     = $uri\n";
+#print "target  = $target\n";
+#print "content = >>$content<<\n";
+
+# seed the random number generator
+srand (time ^ $$ ^ unpack "%L*", `ps axww | gzip`);
+my $num = rand 1000000;
+
+my $nonce = encode_base64("$num", "");
+
+# Set earlier...
+my $passwd = $passphrase;
+
+# Password digest = Base64( SHA-1(nonce + created + password) )
+# (You should see the C code for doing this!)
+my $digest = sha1_base64($nonce . $launch_time . $passwd);
+
+my $user = SOAP::Data->name('wsse:Username' => 'Andy_Porter');
+my $passData = SOAP::Data->name('wsse:Password' => $digest);
+my $nonceData = SOAP::Data->name('wsse:Nonce' => $nonce);
+my $created = SOAP::Data->name('wsse:Created' => $launch_time);
+
+my $hdr1 = SOAP::Data->new(name => 'wsse:UsernameToken', 
+			     value => \SOAP::Data->value($user,
+							 $passData,
+							 $nonceData,
+							 $created));
+
 my $ans =  WSRF::Lite
     -> uri($uri)
     -> wsaddress(WSRF::WS_Address->new()->Address($target))
-    -> SetResourceProperties( SOAP::Data->value( $content )->type( 'xml' ) );
+    -> SetResourceProperties( SOAP::Header->name('wsse:Security')->value(\$hdr1),
+			      SOAP::Data->value( $content )->type( 'xml' ) );
+
+if($ans && $ans->fault){
+    die "createSWSResource ERROR:: ".$ans->faultcode." ".
+	$ans->faultstring."\n"; 
+}
 
 #----------------------------------------------------------------------
 # Save the GSH to file
