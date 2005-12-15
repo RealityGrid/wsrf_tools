@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include <ReG_Steer_Steerside.h>
+#include <ReG_Steer_types.h>
 #include <ReG_Steer_Browser.h>
 /*------------------------------------------------------------*/
 

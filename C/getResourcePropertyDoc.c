@@ -3,6 +3,7 @@
 #define WITH_CDATA /* To ensure gSoap retains CDATA sections */
 #include "soapH.h"
 #include "ReG_Steer_types.h"
+#include "ReG_Steer_Steerside.h"
 #include "ReG_Steer_Steerside_WSRF.h"
 #include "signal.h"
 
@@ -19,41 +20,46 @@ int main(int argc, char **argv){
   char       *passPtr;
   const int   MAX_LEN = 1024;
   char        input[MAX_LEN];
+  char        username[MAX_LEN];
 
   signal(SIGPIPE, sigpipe_handle); 
 
-  if(argc != 2){
-    printf("Usage:\n  getResourcePropertyDoc <EPR of SWS>\n");
+  if(argc != 3){
+    printf("Usage:\n  getResourcePropertyDoc <EPR of SWS> <username>\n");
     return 1;
   }
+  strncpy(username, argv[2], MAX_LEN);
 
   soap_init(&mySoap);
 
   /* If address of SWS begins with 'https' then initialize SSL context */
   if( (strstr(argv[1], "https") == argv[1]) ){
 
+    /* - don't bother with mutually-authenticated SSL
     if( !(passPtr = getpass("Enter passphrase for key: ")) ){
 
       printf("Failed to get passphrase from command line\n");
       return 1;
     }
-
     strncpy(input, passPtr, MAX_LEN);
+    */
 
-    if (soap_ssl_client_context(&mySoap,
-				SOAP_SSL_DEFAULT,
-				NULL,/*"/home/zzcguap/.globus/usercertandkey.pem", /* user's cert. file */
-				NULL,/*input, /* Password to read key file */
-				NULL,  /* Optional CA cert. file to store trusted certificates (to verify server) */
-				"/etc/grid-security/certificates", /* Optional path to directory containing trusted CA certs */
-				NULL)){ /* if randfile!=NULL: use a file with random data to seed randomness */
-      soap_print_fault(&mySoap, stderr);
-      exit(1);
-    }
+    REG_Init_ssl_context(&mySoap,
+			 NULL,/* user's cert. & key file */
+			 NULL,/* Password to read key file */
+			 "/etc/grid-security/certificates");
+  }
+
+  if( !(passPtr = getpass("Enter SWS password: ")) ){
+
+    printf("Failed to get SWS password from command line\n");
+    return 1;
   }
 
   Get_resource_property_doc(&mySoap,
 			    argv[1],
+			    username,
+			    passPtr,
 			    &rpDoc);
 	 
   fprintf(stdout, "Resource property document:\n>>%s<<\n", rpDoc);

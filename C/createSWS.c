@@ -17,14 +17,15 @@ int main(int argc, char **argv){
   char  registryAddr[256];
   char  checkpointEPR[256];
   char  application[256];
+  char  passphrase[256];
   char  purpose[1024];
   char *username;
   char *group = "RSS";
   char *EPR;
 
-  if( (argc != 5) && (argc != 6) ){
+  if( (argc != 6) && (argc != 7) ){
     printf("Usage:\n  createSWS <address of registry>"
-	   " <lifetime (min)> <application> <purpose> [checkpoint EPR]\n");
+	   " <lifetime (min)> <application> <purpose> <passphrase> [checkpoint EPR]\n");
     return 1;
   }
 
@@ -33,10 +34,11 @@ int main(int argc, char **argv){
   strncpy(application, argv[3], 256);
   strncpy(purpose, argv[4], 1024);
   username = getenv("USER");
+  strncpy(passphrase, argv[5], 256);
 
   checkpointEPR[0] = '\0';
-  if(argc == 6){
-    strncpy(checkpointEPR, argv[5], 256);
+  if(argc == 7){
+    strncpy(checkpointEPR, argv[6], 256);
   }
 
   if(Get_registry_entries_filtered(registryAddr, &num_entries,  
@@ -85,7 +87,8 @@ int main(int argc, char **argv){
 				username, group, application,
 				purpose, 
 				"", /* name of input file */
-				checkpointEPR);
+				checkpointEPR,
+				passphrase);
   if(EPR){
     printf("Address of SWS = %s\n", EPR);
   }

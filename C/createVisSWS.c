@@ -18,10 +18,12 @@ int main(int argc, char **argv){
   char  dataSource[256];
   char  purpose[1024];
   char  iodef_label[256];
+  char  passphrase[256];
   char *username;
   char *group = "RSS";
   char *EPR;
   char *ioTypes;
+  char *passPtr;
   struct soap mySoap;
   struct wsrp__SetResourcePropertiesResponse response;
   struct msg_struct *msg;
@@ -33,9 +35,9 @@ int main(int argc, char **argv){
   int               num_entries;
   struct registry_entry *entries;
 
-  if(argc != 5){
+  if(argc != 6){
     printf("Usage:\n  createVisSWS <address of registry> "
-	   "<runtime (min)> <application> <purpose>\n");
+	   "<runtime (min)> <application> <purpose> <passphrase>\n");
     return 1;
   }
 
@@ -43,6 +45,7 @@ int main(int argc, char **argv){
   sscanf(argv[2], "%d", &lifetime);
   strncpy(application, argv[3], 256);
   strncpy(purpose, argv[4], 1024);
+  strncpy(passphrase, argv[5], 256);
   username = getenv("USER");
 
   /* Get the list of available Containers and ask the user to 
@@ -119,10 +122,18 @@ int main(int argc, char **argv){
   strncpy(dataSource, entries[count].gsh, 256);
   free(entries);
 
+  if( !(passPtr = getpass("Enter password for this SWS: ")) ){
+
+    printf("Failed to get password from command line\n");
+    return 1;
+  }
+
   /* Obtain the IOTypes from the data source */
   soap_init(&mySoap);
   if( Get_resource_property (&mySoap,
 			     dataSource,
+			     username,
+			     passPtr,
 			     "ioTypeDefinitions",
 			     &ioTypes) != REG_SUCCESS ){
 
@@ -192,7 +203,8 @@ int main(int argc, char **argv){
 				      containerAddr, registryAddr,
 				      username, group, application,
 				      purpose, "", /* name of input file */
-				      "")) ){ /* chkpoint GSH to restart from */
+				      "", /* chkpoint GSH to restart from */
+				      passphrase)) ){
     printf("FAILED to create SWS for %s :-(\n", application);
     return 1;
   }
@@ -204,6 +216,10 @@ int main(int argc, char **argv){
   snprintf(purpose, 1024, "<dataSource><sourceEPR>%s</sourceEPR>"
 	   "<sourceLabel>%s</sourceLabel></dataSource>",
 	   dataSource, iodef_label);
+
+  if(passphrase[0]){
+    Create_WSSE_header(&mySoap, username, passphrase);
+  }
 
   if(soap_call_wsrp__SetResourceProperties(&mySoap, EPR, 
 					   "", purpose, &response) != SOAP_OK){

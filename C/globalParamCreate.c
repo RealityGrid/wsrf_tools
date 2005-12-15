@@ -7,38 +7,52 @@
 #include "ReG_Steer_Steerside_WSRF.h"
 #include "soapH.h"
 
+/*----------------------------------------------------------*/
+
 int main(int argc, char **argv){
 
+  const int            MAX_LEN = 256;
   char                *parentEPR;
   char                *paramDefs;
   char                *pchar;
   char                *pend;
   char                *childrenTxt;
   char                *appName;
+  char                *passPtr;
   struct soap          mySoap;
   struct msg_struct   *msg;
   struct param_struct *param_ptr;
   const int            MAX_CHILDREN = 10;
-  char                 childEPR[MAX_CHILDREN][256];
-  char                 paramSet[MAX_CHILDREN][256];
+  char                 childEPR[MAX_CHILDREN][MAX_LEN];
+  char                 paramSet[MAX_CHILDREN][MAX_LEN];
   const int            MAX_PARAMS = 30;
   struct param_struct *childParams[MAX_CHILDREN][MAX_PARAMS];
-  char                 nameTxt[128];
+  char                 nameTxt[MAX_LEN];
+  char                *username;
   char                 couplingConfig[1024*1024];
   int                  count;
   int                  childParamCount[MAX_CHILDREN];
   int                  i, j, numInSet;
   struct wsrp__SetResourcePropertiesResponse response;
 
-  if( argc != 2 ){
-    printf("Usage: globalParamCreate <EPR of parent>\n");
+  if( argc != 3 ){
+    printf("Usage: globalParamCreate <EPR of parent> <username>\n");
     return 1;
   }
   parentEPR = argv[1];
+  username = argv[2];
+
+  if( !(passPtr = getpass("Enter SWS password for parent: ")) ){
+
+    printf("Failed to get SWS password from command line\n");
+    return 1;
+  }
 
   soap_init(&mySoap);
   if( Get_resource_property (&mySoap,
                              parentEPR,
+			     username,
+			     passPtr,
                              "paramDefinitions",
                              &paramDefs) != REG_SUCCESS ){
 
@@ -81,6 +95,8 @@ int main(int argc, char **argv){
   /* Now get details of the parent's children */
   if( Get_resource_property (&mySoap,
                              parentEPR,
+			     username,
+			     passPtr,
                              "childService",
                              &childrenTxt) != REG_SUCCESS ){
 
@@ -113,6 +129,8 @@ int main(int argc, char **argv){
 
     if( Get_resource_property (&mySoap,
 			       childEPR[i],
+			       username,
+			       passPtr,
 			       "applicationName",
 			       &appName) != REG_SUCCESS ){
 
@@ -209,7 +227,7 @@ int main(int argc, char **argv){
       printf("%s: %s\n", paramSet[i], paramSet[i+1]);
     }
     printf("\nEnter name for this set/global parameter: ");
-    scanf("%127s", nameTxt);
+    scanf("%255s", nameTxt);
     pend += sprintf(pend, "  <Global_param name=\"%s\">\n", nameTxt);
     for(i=0; i<numInSet; i+=2){
       pend += sprintf(pend, "<Child_param id=\"%s\" label=\"%s\"/>\n", 
