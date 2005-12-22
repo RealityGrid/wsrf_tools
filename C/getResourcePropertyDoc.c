@@ -45,6 +45,7 @@ int main(int argc, char **argv){
     */
 
     REG_Init_ssl_context(&mySoap,
+			 REG_TRUE,
 			 NULL,/* user's cert. & key file */
 			 NULL,/* Password to read key file */
 			 "/etc/grid-security/certificates");
