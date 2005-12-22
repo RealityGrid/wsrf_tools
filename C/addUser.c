@@ -39,6 +39,7 @@ int main(int argc, char **argv){
   if( (strstr(EPR, "https") == EPR) ){
 
     REG_Init_ssl_context(&mySoap,
+			 REG_TRUE, /* Authenticate SWS */
 			 NULL,/* user's cert. & key file */
 			 NULL,/* Password to read key file */
 			 "/etc/grid-security/certificates");
