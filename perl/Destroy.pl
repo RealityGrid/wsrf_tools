@@ -4,8 +4,8 @@ BEGIN {
        @INC = ( @INC, "/home/zzcguap/projects/WSRF-Lite" );
 };
 
-use WSRF::Lite +trace =>  debug => sub {};
-#use WSRF::Lite;
+#use WSRF::Lite +trace =>  debug => sub {};
+use WSRF::Lite;
 use MIME::Base64;
 use Digest::SHA1 qw(sha1 sha1_hex sha1_base64);;
 use strict;
@@ -36,10 +36,13 @@ my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
 my $created = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
                      $year+1900,$mon+1,$mday,$hour,$min,$sec;
 
-print "Enter SWS passphrase: ";
-my $passphrase = <STDIN>;
-chomp($passphrase);
-print "\n";
+my $passphrase;
+if($ARGV[0] =~ m/\/SWS\/SWS\//){
+    print "Enter SWS passphrase: ";
+    $passphrase = <STDIN>;
+    chomp($passphrase);
+    print "\n";
+}
 #my $passphrase = "somethingcunning";
 
 # Password digest = Base64( SHA-1(nonce + created + password) )
