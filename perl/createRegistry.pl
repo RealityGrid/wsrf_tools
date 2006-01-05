@@ -28,7 +28,7 @@ if ( @ARGV != 1)
 {
   print "Usage: createRegistry.pl URL\n";
   print "   URL is the endpoint of the service\n";
-  print "eg.\n createRegistry.pl http://localhost:50000/Session/myServiceGroup/myServiceGroup\n";
+  print "   e.g.: createRegistry.pl http://localhost:50000/Session/regServiceGroup/regServiceGroup\n";
 
   exit;
 }
@@ -38,7 +38,7 @@ my $target = shift @ARGV;
 
 #get the namespace of the service - this is hard coded for the
 #ServiceGroup sample service distributed with WSRF::Lite
-my $uri = "http://www.sve.man.ac.uk/myServiceGroup";
+my $uri = "http://www.sve.man.ac.uk/regServiceGroup";
 
 #This is the operation to invoke - again it is hard coded
 #for the sample ServiceGroup distributed with WSRF::Lite
