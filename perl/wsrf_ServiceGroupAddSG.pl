@@ -27,9 +27,9 @@ $ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
 if ( @ARGV != 2)
 {
   print "Usage: wsrf_ServiceGroupAdd.pl URL ID\n";
-  print "   URL is the EndPoint of the ServiceGroup";
-  print "   ID is the Resource ID of the ServiceGroup\n";  
-  print "eg.\n wsrf_ServiceGroupAdd.pl http://localhost:50005/Session/myServiceGroup/myServiceGroup2345235463546 http://localhost:50005/WSRF/SWS/SWS/55292861054208023930\n";
+  print "   URL is the EndPoint of the ServiceGroup to register with";
+  print "   ID is the EPR of the ServiceGroup to register\n";  
+  print "eg.\n wsrf_ServiceGroupAddSG.pl http://localhost:50005/Session/myServiceGroup/myServiceGroup2345235463546 http://localhost:50005/WSRF/SWS/SWS/55292861054208023930\n";
   exit;
 }
 
@@ -42,6 +42,15 @@ my $id = shift @ARGV;
 
 #the Add operation belongs to this namespace
 my $uri = "http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup";
+
+# Get the time and date
+my $time_now = time;
+my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime($time_now);
+
+# month returned by localtime is zero-indexed and we need to convert to
+# a four-digit date...
+my $launch_time = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
+                     $year+1900,$mon+1,$mday,$hour,$min,$sec;
 
 #This is the information we are going to add to the ServiceGroup -
 #we hard code it here because it is pretty complex to try and
@@ -59,11 +68,11 @@ my $StuffToAdd = '<MemberEPR>
                   <registryEntry>
                     <serviceType>ServiceGroup</serviceType>
                       <componentContent>
-                        <componentStartDateTime>2005-10-03T13:40:28Z</componentStartDateTime>
-			<componentCreatorName>andy</componentCreatorName>
+                        <componentStartDateTime>'.$launch_time.'</componentStartDateTime>
+			<componentCreatorName>/C=UK/O=eScience/OU=Manchester/L=MC/CN=andrew porter</componentCreatorName>
 			<componentCreatorGroup>RSS</componentCreatorGroup>
 			<componentSoftwarePackage>none</componentSoftwarePackage>
-			<componentTaskDescription>SWSFactory registry</componentTaskDescription>
+			<componentTaskDescription>Container registry</componentTaskDescription>
                       </componentContent>
                   </registryEntry>
                   </Content>';
