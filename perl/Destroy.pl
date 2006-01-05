@@ -12,9 +12,9 @@ use strict;
 
 #need to point to users certificates - these are only used
 #if https protocal is being used.
-#$ENV{HTTPS_CA_DIR} = "/etc/grid-security/certificates/";
-$ENV{HTTPS_CERT_FILE} = $ENV{HOME}."/.globus/usercert.pem";
-$ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
+$ENV{HTTPS_CA_DIR} = "/etc/grid-security/certificates/";
+#$ENV{HTTPS_CERT_FILE} = $ENV{HOME}."/.globus/usercert.pem";
+#$ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
 
 if( @ARGV < 1 )
 {
@@ -36,13 +36,10 @@ my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
 my $created = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
                      $year+1900,$mon+1,$mday,$hour,$min,$sec;
 
-my $passphrase;
-if($ARGV[0] =~ m/\/SWS\/SWS\//){
-    print "Enter SWS passphrase: ";
-    $passphrase = <STDIN>;
-    chomp($passphrase);
-    print "\n";
-}
+print "Enter passphrase for service (if any): ";
+my $passphrase = <STDIN>;
+chomp($passphrase);
+print "\n";
 #my $passphrase = "somethingcunning";
 
 # Password digest = Base64( SHA-1(nonce + created + password) )
