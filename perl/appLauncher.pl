@@ -121,6 +121,12 @@ my $run_time = "120\n";
 chomp($run_time);
 print "\n";
 
+print "Enter a passphrase to protect the SWS: ";
+my $passphrase = <STDIN>;
+chomp($passphrase);
+print "\n";
+#my $passphrase = "somethingcunning";
+
 my $job_description = <<EOF;
 <registryEntry>
 <serviceType>SWS</serviceType>
@@ -130,11 +136,12 @@ my $job_description = <<EOF;
 <componentCreatorGroup>$virt_org</componentCreatorGroup>
 <componentSoftwarePackage>$app_name</componentSoftwarePackage>
 <componentTaskDescription>$content</componentTaskDescription>
+<componentPassphrase>$passphrase</componentPassphrase>
 </componentContent>
 </registryEntry>
 EOF
 
-#print $job_description;
+print "Job description >>$job_description<<\n";
 
 #----------------------------------------------------------------------
 # Create SWS
@@ -146,12 +153,6 @@ my $timeToLive = 24*60;
 #my $chkEPR = <STDIN>;
 #print "\n";
 my $chkEPR = '\n';
-
-print "Enter a passphrase to protect the SWS: ";
-my $passphrase = <STDIN>;
-chomp($passphrase);
-print "\n";
-#my $passphrase = "somethingcunning";
 
 # Set the location of the service
 my $target = $myContainer . "Session/SWSFactory/SWSFactory";
@@ -165,7 +166,7 @@ my $ans =  WSRF::Lite
          -> uri($uri)
          -> wsaddress(WSRF::WS_Address->new()->Address($target)) #location of service
          -> createSWSResource($timeToLive, $registry_EPR, 
-			      SOAP::Data->value($job_description)->type('string'), 
+#			      SOAP::Data->value($job_description)->type('string'), 
 			      $chkEPR,
 			      $passphrase);
 
@@ -183,7 +184,47 @@ $target = $address;
 $uri = "http://www.sve.man.ac.uk/SWS";
 
 #---------------------------------------------------------------------
-# Supply input file & max. runtime
+# Register this SWS
+
+my $location = "<MemberEPR><wsa:Address>".$address."</wsa:Address></MemberEPR>\n<Content>";
+
+$job_description = $location . $job_description . "</Content>";
+
+print "Arg to Add call is >>$job_description<<\n";
+
+# $@ is syntax error from last eval (null if none)
+my $locator = "";
+eval{ $ans =  WSRF::Lite
+	  -> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	  -> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
+	  -> Add(SOAP::Data->value($job_description)->type('xml')); 
+};
+if( $@ ){
+    warn $@;
+} else {
+	  
+    if ($ans->fault) {  
+	warn "Failed to register SWS: ".$ans->faultcode." ".
+	    $ans->faultstring."\n"; 
+    }
+
+    #The Add operation returns a WS-Address (within a SOM object).
+    #This EPR is of the ServiceGroupEntry that models the entry you
+    #have just created - destroy the ServiceGroupEntry and the entry
+    #will disappear from the ServiceGroup. You also control the
+    #lifetime of the entry using the ServiceGroupEntry - using
+    #SetTerminationTime on it.
+
+    $locator = $ans->valueof('//AddResponse/EndpointReference/Address') or 
+	warn "init: Service registration error: No Endpoint returned\n";
+
+    print "Call to Add returned:\n";
+    print "      serviceEntry locator = $locator\n";
+}
+
+#---------------------------------------------------------------------
+# Supply location of ServiceGroupEntry, content of input file & 
+# max. runtime
 
 $content = " ";
 if( length($input_file) > 0){
@@ -196,6 +237,8 @@ if( length($input_file) > 0){
     close(GSH_FILE);
 }
 
+$content = "<wsrp:Insert><inputFileContent><![CDATA[" . $content .
+    "]]></inputFileContent>";
 # Protect input-file content by putting it in a CDATA section - we 
 # don't want the parser to attempt to parse it.  If the user has
 # specified a max. run-time of the job then configure the SGS
@@ -203,13 +246,12 @@ if( length($input_file) > 0){
 # minutes than specified, just to be on the safe side.
 if(length($run_time) > 0){
   $run_time += 5;
-  $content = "<wsrp:Insert><inputFileContent><![CDATA[" . $content .
-             "]]></inputFileContent><maxRunTime>" . $run_time . "</maxRunTime></wsrp:Insert>";
+  $content .= "<maxRunTime>" . $run_time . "</maxRunTime>";
 }
-else{
-  $content = "<wsrp:Insert><inputFileContent><![CDATA[" . $content .
-             "]]></inputFileContent></wsrp:Insert>";
+if($locator){
+    $content .= "<ServiceGroupEntry>".$locator."</ServiceGroupEntry>";
 }
+$content .= "</wsrp:Insert>";
 
 #print "uri     = $uri\n";
 #print "target  = $target\n";
@@ -246,7 +288,7 @@ my $ans =  WSRF::Lite
 			      SOAP::Data->value( $content )->type( 'xml' ) );
 
 if($ans && $ans->fault){
-    die "createSWSResource ERROR:: ".$ans->faultcode." ".
+    die "SetResourceProperties ERROR:: ".$ans->faultcode." ".
 	$ans->faultstring."\n"; 
 }
 
