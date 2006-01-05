@@ -6,11 +6,20 @@ BEGIN {
 
 use XML::Parser;
 use LWP::Simple;
-use WSRF::Lite +trace =>  debug => sub {};
-use SOAP::Lite +trace =>  debug => sub {};
-#use SOAP::Lite;
+#use WSRF::Lite +trace =>  debug => sub {};
+#use SOAP::Lite +trace =>  debug => sub {};
+use WSRF::Lite;
+use SOAP::Lite;
 use XML::DOM;
+use MIME::Base64;
+use Digest::SHA1 qw(sha1 sha1_hex sha1_base64);;
 use strict;
+
+#need to point to user's certificates - these are only used
+#if https protocal is being used.
+$ENV{HTTPS_CA_DIR} = "/etc/grid-security/certificates/";
+$ENV{HTTPS_CERT_FILE} = $ENV{HOME}."/.globus/usercert.pem";
+$ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
 
 if( @ARGV != 0  )
 {
@@ -47,7 +56,7 @@ for(my $i=0; $i<@{containers}; $i++){
 # Query Registry for SWSs
 
 my $ans=  WSRF::Lite
-       -> uri($WSRF::Constants::WSRP)
+       -> uri("http://sve.man.ac.uk/regServiceGroup")
        -> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
        -> GetResourceProperty( SOAP::Data->value("Entry")->type('xml') ); 
 
@@ -91,10 +100,43 @@ die "No application SWS found" unless ($app_SWS_EPR ne "NOT_SET");
 #-------------------------------------------------------------------------
 # Query App. SWS for IOType definitions
 
+print "Enter passphrase for this SWS (if any): ";
+my $passphrase = <STDIN>;
+chomp($passphrase);
+print "\n";
+
+# Create WSSE header...
+
+# seed the random number generator
+srand (time ^ $$ ^ unpack "%L*", `ps axww | gzip`);
+my $num = rand 1000000;
+
+my $nonce = encode_base64("$num", "");
+
+my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
+# month returned by localtime is zero-indexed and we need to convert to
+# a four-digit date...
+my $created = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
+                     $year+1900,$mon+1,$mday,$hour,$min,$sec;
+# Password digest = Base64( SHA-1(nonce + created + password) )
+my $digest = sha1_base64($nonce . $created . $passphrase);
+
+my $user = SOAP::Data->name('wsse:Username' => $ENV{'USER'});
+my $passwd = SOAP::Data->name('wsse:Password' => $digest);
+my $nonce = SOAP::Data->name('wsse:Nonce' => $nonce);
+my $created = SOAP::Data->name('wsse:Created' => $created);
+
+my $hdr1 = SOAP::Data->new(name => 'wsse:UsernameToken', 
+			   value => \SOAP::Data->value($user,
+						       $passwd,
+						       $nonce,
+						       $created));
+# Now make the call itself...
 $ans=  WSRF::Lite
        -> uri($WSRF::Constants::WSRP)
        -> wsaddress(WSRF::WS_Address->new()->Address($app_SWS_EPR))
-       -> GetResourceProperty( SOAP::Data->value("ioTypeDefinitions")->type('xml') ); 
+       -> GetResourceProperty(SOAP::Header->name('wsse:Security')->value(\$hdr1),
+			      SOAP::Data->value("ioTypeDefinitions")->type('xml') ); 
 
 if ($ans->fault) {  die "GetResourceProperty ERROR:: ".
 			$ans->faultcode." ".$ans->faultstring."\n"; }
@@ -146,17 +188,17 @@ print "Available containers:\n";
 for($i=0; $i<@{containers}; $i++){
     print "    $i: $containers[$i]\n";
     # ARPDBG - hardwire for now
-    if($containers[$i] =~ m/methuselah/){
-      last;
-    }
+    #if($containers[$i] =~ m/calculon/){
+    #  last;
+    #}
 }
-#$i = -1;
-#my $max_container = @{containers} - 1;
-#while ($i < 0 || $i > $max_container) {
-#    print "Which container do you want to use (0 - $max_container): ";
-#    $i = <STDIN>;
-#    print "\n";
-#}
+$i = -1;
+my $max_container = @{containers} - 1;
+while ($i < 0 || $i > $max_container) {
+    print "Which container do you want to use (0 - $max_container): ";
+    $i = <STDIN>;
+    print "\n";
+}
 
 my $myContainer = $containers[$i];
 
@@ -168,11 +210,6 @@ my $username = $ENV{'USER'};
 
 # Virtual Organisation of user
 my $virt_org = "SVE Group";
-
-# Get the time and date
-my $time_now = time;
-my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
-						gmtime($time_now);
 
 # month returned by localtime is zero-indexed and we need to convert to
 # a four-digit date...
@@ -200,6 +237,36 @@ my $run_time = <STDIN>;
 chomp($run_time);
 print "\n";
 
+# Give the GS an initial lifetime of 24 hours - specified in minutes
+my $timeToLive = 24*60;
+# Set the location of the service
+my $target = $myContainer . "Session/SWSFactory/SWSFactory";
+# Set the namespace of the service
+my $uri = "http://www.sve.man.ac.uk/SWSFactory";
+
+# Now create the SWS for the vis - use the same passphrase as for
+# the simulation SWS (could use a different one if we wanted).
+# (This call returns a SOM object)
+my $ans =  WSRF::Lite
+         -> uri($uri)
+         -> wsaddress(WSRF::WS_Address->new()->Address($target)) #location of service
+         -> createSWSResource($timeToLive, $registry_EPR, 
+			      #SOAP::Data->value($content)->type('string'),
+			      "", $passphrase);
+
+if ($ans->fault) {  die "CREATE ERROR:: ".$ans->faultcode." ".
+                        $ans->faultstring."\n"; }
+
+# Check we got a WS-Address EndPoint back
+my $vis_SWS_EPR = $ans->valueof('//Body//Address') or
+    die "CREATE ERROR:: No Endpoint returned\n";
+
+#---------------------------------------------------------------------
+# Register this SWS
+
+my $location = "<MemberEPR><wsa:Address>".$vis_SWS_EPR.
+    "</wsa:Address></MemberEPR>\n<Content>";
+
 my $content =  <<EOF;
 <registryEntry>
 <serviceType>SWS</serviceType>
@@ -213,29 +280,64 @@ my $content =  <<EOF;
 </registryEntry>
 EOF
 
-# Give the GS an initial lifetime of 24 hours - specified in minutes
-my $timeToLive = 24*60;
-# Set the location of the service
-my $target = $myContainer . "Session/SWSFactory/SWSFactory";
-# Set the namespace of the service
-my $uri = "http://www.sve.man.ac.uk/SWSFactory";
+$content = $location . $content . "</Content>";
 
-# This call returns a SOM object
-my $ans =  WSRF::Lite
-         -> uri($uri)
-         -> wsaddress(WSRF::WS_Address->new()->Address($target)) #location of service
-         -> createSWSResource($timeToLive, $registry_EPR, 
-			      SOAP::Data->value($content)->type('string'));
+print "Arg to Add call is >>$content<<\n";
 
-if ($ans->fault) {  die "CREATE ERROR:: ".$ans->faultcode." ".
-                        $ans->faultstring."\n"; }
+# This call uses SSL rather than WSSE for authentication
+# $@ is syntax error from last eval (null if none)
+my $locator = "";
+eval{ $ans =  WSRF::Lite
+	  -> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	  -> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
+	  -> Add(SOAP::Data->value($content)->type('xml')); 
+};
+if( $@ ){
+    warn $@;
+} else {
+	  
+    if ($ans->fault) {  
+	warn "Failed to register SWS: ".$ans->faultcode." ".
+	    $ans->faultstring."\n"; 
+    }
 
-# Check we got a WS-Address EndPoint back
-my $vis_SWS_EPR = $ans->valueof('//Body//Address') or
-    die "CREATE ERROR:: No Endpoint returned\n";
+    #The Add operation returns a WS-Address (within a SOM object).
+    #This EPR is of the ServiceGroupEntry that models the entry you
+    #have just created - destroy the ServiceGroupEntry and the entry
+    #will disappear from the ServiceGroup. You also control the
+    #lifetime of the entry using the ServiceGroupEntry - using
+    #SetTerminationTime on it.
+
+    $locator = $ans->valueof('//AddResponse/EndpointReference/Address') or 
+	warn "Service registration error: No Endpoint returned\n";
+
+    print "Call to Add returned locator = $locator\n";
+}
 
 #-------------------------------------------------------------------------
 # Set-up Vis. SWS with data sources & max. run time
+
+# Another WSSE header needed...
+$nonce = encode_base64("$num", "");
+
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
+# month returned by localtime is zero-indexed and we need to convert to
+# a four-digit date...
+$created = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
+                   $year+1900,$mon+1,$mday,$hour,$min,$sec;
+# Password digest = Base64( SHA-1(nonce + created + password) )
+$digest = sha1_base64($nonce . $created . $passphrase);
+
+$user = SOAP::Data->name('wsse:Username' => $ENV{'USER'});
+$passwd = SOAP::Data->name('wsse:Password' => $digest);
+$nonce = SOAP::Data->name('wsse:Nonce' => $nonce);
+$created = SOAP::Data->name('wsse:Created' => $created);
+
+$hdr1 = SOAP::Data->new(name => 'wsse:UsernameToken', 
+			value => \SOAP::Data->value($user,
+						    $passwd,
+						    $nonce,
+						    $created));
 
 my $dataSources = "<dataSource>
 <sourceEPR>" . $app_SWS_EPR . "</sourceEPR>
@@ -246,22 +348,18 @@ my $dataSources = "<dataSource>
 # configure the SWS with it (is used to control life-time of
 # the service). Allow 5 more minutes than specified, just to 
 # be on the safe side.
-my $arg = "";
+my $arg = "<wsrp:Insert>".$dataSources;
 if(length($run_time) > 0){
   $run_time += 5;
-  $arg = "<wsrp:Insert>".$dataSources.
-         "<maxRunTime>".$run_time.
-         "</maxRunTime></wsrp:Insert>";
+  $arg .= "<maxRunTime>".$run_time."</maxRunTime>";
 }
-else{
-  $arg = "<wsrp:Insert>".$dataSources.
-         "</wsrp:Insert>";
-}
+$arg .= "</wsrp:Insert>";
 
 my $ans =  WSRF::Lite
     -> uri($WSRF::Constants::WSRP)
     -> wsaddress(WSRF::WS_Address->new()->Address($vis_SWS_EPR))
-    -> SetResourceProperties( SOAP::Data->value( $arg )->type( 'xml' ) );
+    -> SetResourceProperties( SOAP::Header->name('wsse:Security')->value(\$hdr1),
+			      SOAP::Data->value( $arg )->type( 'xml' ) );
 
 if($ans->fault){ die "SetResourceProperties ERROR:: ".$ans->faultcode." ".
 		     $ans->faultstring."\n"; }
