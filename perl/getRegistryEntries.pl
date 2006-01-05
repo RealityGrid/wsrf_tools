@@ -89,16 +89,17 @@ for (my $i=0; $i < @{entryContent}; $i++){
 	print "         User: $userNames[$i]\n";
         print "         Time: $startTimes[$i]\n";
 	print "     SWS addr: $swsEPRs[$i]\n";
-	print "   Entry addr: $serviceGroupEPRs[$i]\n";
     }
     elsif($type eq "ServiceGroup"){
 	print "Registry addr: $swsEPRs[$i]\n";
-	print "   Entry addr: $serviceGroupEPRs[$i]\n";
     }
     elsif($type eq "SWSFactory"){
         print " Factory addr: $swsEPRs[$i]\n";
-	print "   Entry addr: $serviceGroupEPRs[$i]\n";
     }
+    elsif($type eq "Container"){
+        print "      Address: $swsEPRs[$i]\n";
+    }
+    print "   Entry addr: $serviceGroupEPRs[$i]\n";
 }
 
 print "\n";
