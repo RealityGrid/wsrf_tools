@@ -245,7 +245,7 @@ my $target = $myContainer . "Session/SWSFactory/SWSFactory";
 my $uri = "http://www.sve.man.ac.uk/SWSFactory";
 
 # Now create the SWS for the vis - use the same passphrase as for
-# the simulation SWS (could use a different one if we wanted).
+# the simulation SWS.
 # (This call returns a SOM object)
 my $ans =  WSRF::Lite
          -> uri($uri)
@@ -276,6 +276,7 @@ my $content =  <<EOF;
 <componentCreatorGroup>$virt_org</componentCreatorGroup>
 <componentSoftwarePackage>$app_name</componentSoftwarePackage>
 <componentTaskDescription>$purpose</componentTaskDescription>
+<componentPassphrase>$passphrase</componentPassphrase>
 </componentContent>
 </registryEntry>
 EOF
