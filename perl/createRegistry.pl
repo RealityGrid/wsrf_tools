@@ -24,37 +24,41 @@ $ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
 
 
 
-if ( @ARGV != 1)
+if ( @ARGV < 1)
 {
-  print "Usage: createRegistry.pl URL\n";
+  print "Usage: createRegistry.pl <URL> [passphrase]\n";
   print "   URL is the endpoint of the service\n";
-  print "   e.g.: createRegistry.pl http://localhost:50000/Session/regServiceGroup/regServiceGroup\n";
+  print "   passphrase is used to authentic the web-based registry browser if using security\n";
+  print "   e.g.: createRegistry.pl http://localhost:50000/Session/regServiceGroup/regServiceGroup roygbiv\n";
 
   exit;
 }
 
 #get the location/endpoint of the service
 my $target = shift @ARGV;
+my $passphrase = "";
+if($target =~ m/^https/){
+    if (@ARGV != 1){
+	print "A passphrase must be specified when creating a secured registry\n";
+	exit;
+    }
+    $passphrase = shift @ARGV;
+}
 
 #get the namespace of the service - this is hard coded for the
 #ServiceGroup sample service distributed with WSRF::Lite
 my $uri = "http://www.sve.man.ac.uk/regServiceGroup";
 
-#This is the operation to invoke - again it is hard coded
-#for the sample ServiceGroup distributed with WSRF::Lite
-my $func = "createServiceGroup";
-
-
 my $ans=  SOAP::Lite
          -> uri($uri)
-	 -> on_action( sub {sprintf '%s/%s', @_} )       #override the default SOAPAction to use a '/' instead of a '#'
-	 -> proxy("$target")                             #location of service
-         -> $func();                                     #function + args to invoke
+	 -> on_action( sub {sprintf '%s/%s', @_} ) #override the default SOAPAction to use a '/' instead of a '#'
+	 -> proxy("$target")                       #location of service
+         -> createServiceGroup($passphrase);       #function + args to invoke
 
 
 if ($ans->fault) {  die "CREATE ERROR:: ".$ans->faultcode." ".$ans->faultstring."\n"; }
 
-#Check we got a WS-Address EndPoint back
+#Check we that got a WS-Address EndPoint back
 my $address = $ans->valueof('//Address') or 
        die "CREATE ERROR:: No Endpoint returned\n";
 
