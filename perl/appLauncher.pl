@@ -127,6 +127,23 @@ chomp($passphrase);
 print "\n";
 #my $passphrase = "somethingcunning";
 
+#subject=DN
+
+open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) || die("can't open your cert. file: $!");
+my @lines = <CERT_FILE>;
+close(CERT_FILE);
+my $DN="";
+foreach my $line (@lines){
+
+    if($line =~ m/^subject=/){
+	chomp($line);
+	$line =~ s/^subject=//o;
+	$DN = $line;
+	last;
+    }
+}
+print "Your DN = $DN\n";
+
 my $job_description = <<EOF;
 <registryEntry>
 <serviceType>SWS</serviceType>
@@ -136,8 +153,13 @@ my $job_description = <<EOF;
 <componentCreatorGroup>$virt_org</componentCreatorGroup>
 <componentSoftwarePackage>$app_name</componentSoftwarePackage>
 <componentTaskDescription>$content</componentTaskDescription>
-<componentPassphrase>$passphrase</componentPassphrase>
 </componentContent>
+<regSecurity>
+<passphrase>$passphrase</passphrase>
+<allowedUsers>
+<user>$DN</user>
+</allowedUsers>
+</regSecurity>
 </registryEntry>
 EOF
 
@@ -223,7 +245,7 @@ if( $@ ){
 }
 
 #---------------------------------------------------------------------
-# Supply location of ServiceGroupEntry, content of input file & 
+# Supply location of ServiceGroupEntry, ServiceGroup, content of input file & 
 # max. runtime
 
 $content = " ";
@@ -249,7 +271,8 @@ if(length($run_time) > 0){
   $content .= "<maxRunTime>" . $run_time . "</maxRunTime>";
 }
 if($locator){
-    $content .= "<ServiceGroupEntry>".$locator."</ServiceGroupEntry>";
+    $content .= "<ServiceGroupEntry>".$locator."</ServiceGroupEntry>".
+	        "<registryEPR>".$registry_EPR."</registryEPR>";
 }
 $content .= "</wsrp:Insert>";
 
