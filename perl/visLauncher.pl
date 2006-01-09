@@ -267,6 +267,21 @@ my $vis_SWS_EPR = $ans->valueof('//Body//Address') or
 my $location = "<MemberEPR><wsa:Address>".$vis_SWS_EPR.
     "</wsa:Address></MemberEPR>\n<Content>";
 
+open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) || die("can't open your cert. file: $!");
+my @lines = <CERT_FILE>;
+close(CERT_FILE);
+my $DN="";
+foreach my $line (@lines){
+
+    if($line =~ m/^subject=/){
+	chomp($line);
+	$line =~ s/^subject=//o;
+	$DN = $line;
+	last;
+    }
+}
+print "Your DN = $DN\n";
+
 my $content =  <<EOF;
 <registryEntry>
 <serviceType>SWS</serviceType>
@@ -276,9 +291,13 @@ my $content =  <<EOF;
 <componentCreatorGroup>$virt_org</componentCreatorGroup>
 <componentSoftwarePackage>$app_name</componentSoftwarePackage>
 <componentTaskDescription>$purpose</componentTaskDescription>
-<componentPassphrase>$passphrase</componentPassphrase>
 </componentContent>
-</registryEntry>
+<regSecurity>
+<passphrase>$passphrase</passphrase>
+<allowedUsers>
+<user>$DN</user>
+</allowedUsers>
+</regSecurity></registryEntry>
 EOF
 
 $content = $location . $content . "</Content>";
@@ -353,6 +372,10 @@ my $arg = "<wsrp:Insert>".$dataSources;
 if(length($run_time) > 0){
   $run_time += 5;
   $arg .= "<maxRunTime>".$run_time."</maxRunTime>";
+}
+if($locator){
+    $arg .= "<ServiceGroupEntry>".$locator."</ServiceGroupEntry>".
+   	    "<registryEPR>".$registry_EPR."</registryEPR>";
 }
 $arg .= "</wsrp:Insert>";
 
