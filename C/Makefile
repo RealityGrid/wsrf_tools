@@ -1,16 +1,21 @@
-CC = distcc
-C_FLAGS = -g -Wall -DWITH_OPENSSL -DDEBUG
-INCLUDE_PATH = -I/usr/include/libxml2 -I${REG_STEER_HOME}/include
-LIB_FLAGS = securityUtils.o -L${REG_STEER_HOME}/lib32 \
-            -lReG_Steer_Utils -lReG_Steer \
-            -lxml2 -lm -lz -lssl -lcrypto 
+include ${REG_STEER_HOME}/Makefile.include
+include ${REG_STEER_HOME}/make/Makefile.${ARCH}
+
+
+INCLUDE_PATH = ${STEER_INCLUDES}
+#C_FLAGS = ${C_FLAGS} -DDEBUG
+LIB_FLAGS = securityUtils.o  ${STEER_LIBS} -lReG_Steer_Utils \
+            -lReG_Steer ${STEER_LDFLAGS} 
 
 .SUFFIXES: .o .c
 
 .c.o:
 	${CC} ${C_FLAGS} ${INCLUDE_PATH} -c $< -o $@
 
-all: addUser browseRegistry createSWS createVisSWS destroySWS globalParamCreate getResourcePropertyDoc testSSL
+TARGETS = addUser browseRegistry createSWS createVisSWS destroySWS \
+          globalParamCreate getResourcePropertyDoc
+
+all: ${TARGETS} 
 
 addUser: addUser.o
 	${CC} ${C_FLAGS} addUser.o ${LIB_FLAGS} -o $@
@@ -33,12 +38,11 @@ globalParamCreate: globalParamCreate.o
 getResourcePropertyDoc: getResourcePropertyDoc.o
 	${CC} ${C_FLAGS} getResourcePropertyDoc.o ${LIB_FLAGS} -o $@
 
-testSSL: testSSL.o
-	${CC} ${C_FLAGS} testSSL.o ${LIB_FLAGS} -o $@
-
 clean:
 	rm -f browseRegistry createSWS createVisSWS 
 	rm -f destroySWS globalParamCreate getResourcePropertyDoc
-	rm -f addUser testSSL
+	rm -f addUser
 	rm -f *.o
 	rm -f *~
+
+${TARGETS}: securityUtils.o
