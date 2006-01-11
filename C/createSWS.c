@@ -9,16 +9,11 @@
 
 #include "libxml/xmlmemory.h"
 #include "libxml/parser.h"
+#include "securityUtils.h"
 
 /*------------------------------------------------------------*/
-void sigpipe_handle(int x) { }
-int getSecurityConfig();
 
-#define MAX_LEN 256
-char   securityConfigFile[MAX_LEN];
-char   caCertsPath[MAX_LEN]; 
-char   myKeyCertFile[MAX_LEN];
-char   userDN[MAX_LEN];
+void sigpipe_handle(int x) { }
 
 /*------------------------------------------------------------*/
 
@@ -32,6 +27,7 @@ int main(int argc, char **argv){
   char *EPR;
   char *keyPassphrase = NULL;
   struct job_details job;
+  struct security_info sec;
 
   job.userName[0] = '\0';
   sprintf(job.group, "RSS");
@@ -51,25 +47,21 @@ int main(int argc, char **argv){
   sscanf(argv[2], "%d", &(job.lifetimeMinutes));
   strncpy(job.software, argv[3], MAX_LEN);
   strncpy(job.purpose, argv[4], 1024);
-  sprintf(job.userName, getenv("USER"));
+  sprintf(job.userName, "%s", getenv("USER"));
   strncpy(job.passphrase, argv[5], MAX_LEN);
 
   if(argc == 7){
     strncpy(job.checkpointAddress, argv[6], MAX_LEN);
   }
 
-  securityConfigFile[0] = '\0';
-  caCertsPath[0] = '\0';
-  myKeyCertFile[0] = '\0';
-
   if(strstr(registryAddr, "https") == registryAddr){
 
     /* Read the location of certs etc. into global variables */
-    if(getSecurityConfig()){
+    if(getSecurityConfig(&sec)){
       printf("Failed to get security configuration\n");
       return 1;
     }
-    sprintf(job.userName, userDN);
+    sprintf(job.userName, sec.userDN);
 
     /* Now get the user's passphrase for their key */
     if( !(keyPassphrase = getpass("Enter passphrase for key: ")) ){
@@ -81,8 +73,8 @@ int main(int argc, char **argv){
 
   if(Get_registry_entries_filtered_secure(registryAddr,
 					  keyPassphrase,
-					  myKeyCertFile, 
-					  caCertsPath,  
+					  sec.myKeyCertFile, 
+					  sec.caCertsPath,  
 					  &num_entries,  &entries,
 					  "Container registry") != REG_SUCCESS){
     printf("Search for registry of available containers failed\n");
@@ -99,8 +91,8 @@ int main(int argc, char **argv){
   free(entries);
   if(Get_registry_entries_filtered_secure(containerAddr, 
 					  keyPassphrase,
-					  myKeyCertFile, 
-					  caCertsPath,  
+					  sec.myKeyCertFile, 
+					  sec.caCertsPath,  
 					  &num_entries,  
 					  &entries,
 					  "Container") != REG_SUCCESS){
@@ -129,8 +121,8 @@ int main(int argc, char **argv){
   free(entries);
 
   EPR = Create_steering_service(&job, containerAddr, registryAddr,
-				keyPassphrase, myKeyCertFile,
-				caCertsPath);
+				keyPassphrase, sec.myKeyCertFile,
+				sec.caCertsPath);
   if(EPR){
     printf("Address of SWS = %s\n", EPR);
   }
@@ -138,91 +130,5 @@ int main(int argc, char **argv){
     printf("FAILED to create SWS :-(\n");
   }
 	 
-  return 0;
-}
-
-/*-----------------------------------------------------------------*/
-
-int getSecurityConfig(){
-
-  char      *pChar;
-  int        len;
-  xmlDocPtr  doc;
-  xmlNodePtr cur;
-  xmlChar   *attrValue;
-  FILE      *fp;
-  char       bufline[512];
-
-  /* Parse the RealityGrid/etc/security.conf file */
-  if( !(pChar = getenv("HOME")) ){
-    fprintf(stderr, "Failed to get $HOME environment variable\n");
-    return REG_FAILURE;
-  }
-  sprintf(securityConfigFile, "%s/RealityGrid/etc/security.conf",
-	  pChar);
-
-  doc = xmlParseFile(securityConfigFile);
-  if( !(cur = xmlDocGetRootElement(doc)) ){
-    printf("Error parsing xml from security.conf: empty document\n");
-    xmlFreeDoc(doc);
-    xmlCleanupParser();
-    return 1;
-  }
-  if (xmlStrcmp(cur->name, (const xmlChar *) "Security_config")){
-    printf("Error parsing xml from security.conf: root element "
-	   "is not 'Security_config'\n");
-    return 1;
-  }
-  cur = cur->xmlChildrenNode;
-  /* Walk the tree - search for first non-blank node */
-  while ( cur ){
-    if(xmlIsBlankNode ( cur ) ){
-      cur = cur -> next;
-      continue;
-    }
-    if( !xmlStrcmp(cur->name, (const xmlChar *)"caCertsPath") ){
-      attrValue = xmlGetProp(cur, "value");
-      if(attrValue){
-	len = xmlStrlen(attrValue);
-	strncpy(caCertsPath, (char *)attrValue, len);
-	myKeyCertFile[len] = '\0';
-	printf("caCertsPath >>%s<<\n", caCertsPath);
-	xmlFree(attrValue);
-      }
-    }
-    else if( !xmlStrcmp(cur->name, (const xmlChar *)"privateKeyCertFile") ){	  
-      attrValue = xmlGetProp(cur, "value");
-      if(attrValue){
-	len = xmlStrlen(attrValue);
-	strncpy(myKeyCertFile, (char *)attrValue, len);
-	myKeyCertFile[len] = '\0';
-	printf("myKeyCertFile >>%s<<\n", myKeyCertFile);
-	xmlFree(attrValue);
-      }
-    }
-    cur = cur -> next;
-  }
-
-  /* Extract user's DN from their certificate */
-  if( !(fp = fopen(myKeyCertFile, "r")) ){
-
-    fprintf(stderr, "Failed to open key and cert file >>%s<<\n",
-	    myKeyCertFile);
-    return REG_FAILURE;
-  }
-
-  userDN[0] = '\0';
-  while( fgets(bufline, 512, fp) ){
-    if(strstr(bufline, "subject=")){
-      /* Remove trailing new-line character */
-      bufline[strlen(bufline)-1] = '\0';
-      pChar = strchr(bufline, '=');
-      snprintf(userDN, MAX_LEN, "%s", pChar+1);
-      break;
-    }
-  }
-
-  printf("User's DN >>%s<<\n", userDN);
-
   return 0;
 }
