@@ -6,34 +6,45 @@
 #include "ReG_Steer_Steerside_WSRF.h"
 #include "ReG_Steer_Utils.h"
 #include "soapH.h"
+#include "securityUtils.h"
+
+/*------------------------------------------------------------*/
+
+void sigpipe_handle(int x) { }
 
 /*------------------------------------------------------------*/
 
 int main(int argc, char **argv){
 
-  int   lifetime;
   char  containerAddr[256];
   char  registryAddr[256];
-  char  application[256];
   char  dataSource[256];
-  char  purpose[1024];
   char  iodef_label[256];
-  char  passphrase[256];
-  char *username;
-  char *group = "RSS";
+  char  buf[1024];
   char *EPR;
   char *ioTypes;
   char *passPtr;
+  char *keyPassphrase;
   struct soap mySoap;
   struct wsrp__SetResourcePropertiesResponse response;
   struct msg_struct *msg;
   xmlDocPtr doc;
   xmlNsPtr   ns;
   xmlNodePtr cur;
-  struct io_struct *ioPtr;
-  int               i, count;
-  int               num_entries;
+  struct io_struct      *ioPtr;
+  int                    i, count;
+  int                    num_entries;
   struct registry_entry *entries;
+  struct job_details     job;
+  struct security_info   sec;
+
+  job.userName[0] = '\0';
+  sprintf(job.group, "RSS");
+  job.software[0] = '\0';
+  job.purpose[0] = '\0';
+  job.inputFilename[0] = '\0';
+  job.checkpointAddress[0] = '\0';
+  job.passphrase[0] = '\0';
 
   if(argc != 6){
     printf("Usage:\n  createVisSWS <address of registry> "
@@ -42,16 +53,33 @@ int main(int argc, char **argv){
   }
 
   strncpy(registryAddr, argv[1], 256);
-  sscanf(argv[2], "%d", &lifetime);
-  strncpy(application, argv[3], 256);
-  strncpy(purpose, argv[4], 1024);
-  strncpy(passphrase, argv[5], 256);
-  username = getenv("USER");
+  sscanf(argv[2], "%d", &(job.lifetimeMinutes));
+  strncpy(job.software, argv[3], 256);
+  strncpy(job.purpose, argv[4], 1024);
+  strncpy(job.passphrase, argv[5], 256);
+  sprintf(job.userName, "%s", getenv("USER"));
+
+  if(strstr(registryAddr, "https") == registryAddr){
+
+    /* Read the location of certs etc. into global variables */
+    if(getSecurityConfig(&sec)){
+      printf("Failed to get security configuration\n");
+      return 1;
+    }
+    sprintf(job.userName, sec.userDN);
+
+    /* Now get the user's passphrase for their key */
+    if( !(keyPassphrase = getpass("Enter passphrase for key: ")) ){
+
+      printf("Failed to get key passphrase from command line\n");
+      return 1;
+    }
+  }
 
   /* Get the list of available Containers and ask the user to 
      choose one */
   if(Get_registry_entries_filtered(registryAddr, &num_entries,  
-				   &entries,
+				   &entries, 
 				   "Container registry") != REG_SUCCESS){
     fprintf(stderr, 
 	    "Search for registry of available containers failed\n");
@@ -67,8 +95,7 @@ int main(int argc, char **argv){
   strcpy(containerAddr, entries[0].gsh);
   free(entries);
   if(Get_registry_entries_filtered(containerAddr, &num_entries,  
-				   &entries,
-				   "Container") != REG_SUCCESS){
+				   &entries, "Container") != REG_SUCCESS){
     fprintf(stderr, "Search for available containers failed\n");
     return 1;
   }
@@ -106,7 +133,7 @@ int main(int argc, char **argv){
     if( !strcmp(entries[i].service_type, "SWS") ){
       printf("  %d:      EPR: %s\n", i, entries[i].gsh);
       printf("           App: %s\n", entries[i].application);
-      printf("          user: %s, %s\n", entries[i].user, entries[i].group);
+      printf("  User & group: %s, %s\n", entries[i].user, entries[i].group);
       printf("    Start time: %s\n", entries[i].start_date_time);
       printf("   Description: %s\n\n", entries[i].job_description);
     }
@@ -122,6 +149,8 @@ int main(int argc, char **argv){
   strncpy(dataSource, entries[count].gsh, 256);
   free(entries);
 
+  /* Ask the user to specify the (WSSE) password for access to 
+     this SWS */
   if( !(passPtr = getpass("Enter password for this SWS: ")) ){
 
     printf("Failed to get password from command line\n");
@@ -132,7 +161,7 @@ int main(int argc, char **argv){
   soap_init(&mySoap);
   if( Get_resource_property (&mySoap,
 			     dataSource,
-			     username,
+			     job.userName,
 			     passPtr,
 			     "ioTypeDefinitions",
 			     &ioTypes) != REG_SUCCESS ){
@@ -199,13 +228,12 @@ int main(int argc, char **argv){
 
   /* Now create SWS for the vis */
 
-  if( !(EPR = Create_steering_service(lifetime, 
-				      containerAddr, registryAddr,
-				      username, group, application,
-				      purpose, "", /* name of input file */
-				      "", /* chkpoint GSH to restart from */
-				      passphrase)) ){
-    printf("FAILED to create SWS for %s :-(\n", application);
+  if( !(EPR = Create_steering_service(&job, containerAddr, 
+				      registryAddr,
+				      keyPassphrase, 
+				      sec.myKeyCertFile,
+				      sec.caCertsPath)) ){
+    printf("FAILED to create SWS for %s :-(\n", job.software);
     return 1;
   }
 
@@ -213,16 +241,16 @@ int main(int argc, char **argv){
 
   /* Finally, set it up with information on the data source*/
 
-  snprintf(purpose, 1024, "<dataSource><sourceEPR>%s</sourceEPR>"
+  snprintf(buf, 1024, "<dataSource><sourceEPR>%s</sourceEPR>"
 	   "<sourceLabel>%s</sourceLabel></dataSource>",
 	   dataSource, iodef_label);
 
-  if(passphrase[0]){
-    Create_WSSE_header(&mySoap, username, passphrase);
+  if(job.passphrase[0]){
+    Create_WSSE_header(&mySoap, job.userName, job.passphrase);
   }
 
   if(soap_call_wsrp__SetResourceProperties(&mySoap, EPR, 
-					   "", purpose, &response) != SOAP_OK){
+					   "", buf, &response) != SOAP_OK){
     soap_print_fault(&mySoap, stderr);
     fprintf(stderr, "Failed to initialize SWS with info. on data source :-(");
     return 1;
