@@ -15,7 +15,6 @@ $ENV{HTTPS_CA_DIR} = "/etc/grid-security/certificates/";
 $ENV{HTTPS_CERT_FILE} = $ENV{HOME}."/.globus/usercert.pem";
 $ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
 
-
 if ( @ARGV < 1 || @ARGV > 2)
 {
   print "Usage: createReGFramework.pl <Container for registries> [passphrase]\n";
@@ -190,4 +189,15 @@ $ans = WSRF::Lite
 #Check we got a WS-Address EndPoint back
 die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
 
+#-----------------------------------
+# Save the registry EPR
+
+open(EPR_FILE, "> reg_registry_info.sh") || die("can't open datafile: $!");
+
+print EPR_FILE "#!/bin/sh\n";
+print EPR_FILE "export REG_REGISTRY_EPR=$topLevelRegistryAddress\n";
+
+close(EPR_FILE);
+
+#------------------------------------
 print "All done... :-)\n";
