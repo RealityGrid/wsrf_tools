@@ -1,2 +1,2 @@
 #!/bin/sh
-export REG_REGISTRY_EPR=http://bala.mvc.mcc.ac.uk:50005/Session/myServiceGroup/myServiceGroup/4116153071052241078568
+export REG_REGISTRY_EPR=https://bala.mvc.mcc.ac.uk:50050/Session/regServiceGroup/regServiceGroup/23211410010629079977
