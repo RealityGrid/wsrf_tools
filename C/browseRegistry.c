@@ -10,24 +10,21 @@
 /*------------------------------------------------------------*/
 
 void sigpipe_handle(int x) { }
+int getSecurityConfig();
+
+char   securityConfigFile[256];
+char   caCertsPath[256]; 
+char   myKeyCertFile[256];
 
 /*------------------------------------------------------------*/
 
 int main(int argc, char **argv){
 
   char   registryEPR[128];
-  char   securityConfigFile[256];
-  char   caCertsPath[256]; 
-  char   myKeyCertFile[256];
   char  *passPtr;
-  char  *homeDir;
-  int    i, len;
+  int    i;
   int    num_entries;
   struct registry_entry *entries;
-
-  xmlDocPtr  doc;
-  xmlNodePtr cur;
-  xmlChar   *attrValue;
 
   if(argc < 2 || argc > 3){
     printf("Usage:\n  browseRegistry <EPR of Registry "
@@ -40,51 +37,10 @@ int main(int argc, char **argv){
 
     if(strstr(registryEPR, "https") == registryEPR){
 
-      /* Parse the RealityGrid/etc/security.conf file */
-      homeDir = getenv("HOME");
-      sprintf(securityConfigFile, "%s/RealityGrid/etc/security.conf",
-	      homeDir);
-
-      doc = xmlParseFile(securityConfigFile);
-      if( !(cur = xmlDocGetRootElement(doc)) ){
-	printf("Error parsing xml from security.conf: empty document\n");
-	xmlFreeDoc(doc);
-	xmlCleanupParser();
+      /* Read the location of certs etc. into global variables */
+      if(getSecurityConfig()){
+	printf("Failed to get security configuration\n");
 	return 1;
-      }
-      if (xmlStrcmp(cur->name, (const xmlChar *) "Security_config")){
-	printf("Error parsing xml from security.conf: root element "
-	       "is not 'Security_config'\n");
-	return 1;
-      }
-      cur = cur->xmlChildrenNode;
-      /* Walk the tree - search for first non-blank node */
-      while ( cur ){
-	if(xmlIsBlankNode ( cur ) ){
-	  cur = cur -> next;
-	  continue;
-	}
-	if( !xmlStrcmp(cur->name, (const xmlChar *)"caCertsPath") ){
-	  attrValue = xmlGetProp(cur, "value");
-	  if(attrValue){
-	    len = xmlStrlen(attrValue);
-	    strncpy(caCertsPath, (char *)attrValue, len);
-	    myKeyCertFile[len] = '\0';
-	    printf("caCertsPath >>%s<<\n", caCertsPath);
-	    xmlFree(attrValue);
-	  }
-	}
-	else if( !xmlStrcmp(cur->name, (const xmlChar *)"privateKeyCertFile") ){	  
-	  attrValue = xmlGetProp(cur, "value");
-	  if(attrValue){
-	    len = xmlStrlen(attrValue);
-	    strncpy(myKeyCertFile, (char *)attrValue, len);
-	    myKeyCertFile[len] = '\0';
-	    printf("myKeyCertFile >>%s<<\n", myKeyCertFile);
-	    xmlFree(attrValue);
-	  }
-	}
-	cur = cur -> next;
       }
 
       /* Now get the user's passphrase for their key */
@@ -128,10 +84,71 @@ int main(int argc, char **argv){
     printf("           EPR: %s\n", entries[i].gsh);
     printf("     Entry EPR: %s\n", entries[i].entry_gsh);
     printf("           App: %s\n", entries[i].application);
-    printf("          user: %s, %s\n", entries[i].user, entries[i].group);
+    printf("  User & group: %s, %s\n", entries[i].user, entries[i].group);
     printf("    Start time: %s\n", entries[i].start_date_time);
     printf("   Description: %s\n\n", entries[i].job_description);
   }
   free(entries);
+  return 0;
+}
+
+/*-----------------------------------------------------------------*/
+
+int getSecurityConfig(){
+
+  char  *homeDir;
+  int    len;
+  xmlDocPtr  doc;
+  xmlNodePtr cur;
+  xmlChar   *attrValue;
+
+  /* Parse the RealityGrid/etc/security.conf file */
+  homeDir = getenv("HOME");
+  sprintf(securityConfigFile, "%s/RealityGrid/etc/security.conf",
+	  homeDir);
+  printf("\nReading security configuration from: %s\n\n", 
+	 securityConfigFile);
+
+  doc = xmlParseFile(securityConfigFile);
+  if( !(cur = xmlDocGetRootElement(doc)) ){
+    printf("Error parsing xml from security.conf: empty document\n");
+    xmlFreeDoc(doc);
+    xmlCleanupParser();
+    return 1;
+  }
+  if (xmlStrcmp(cur->name, (const xmlChar *) "Security_config")){
+    printf("Error parsing xml from security.conf: root element "
+	   "is not 'Security_config'\n");
+    return 1;
+  }
+  cur = cur->xmlChildrenNode;
+  /* Walk the tree - search for first non-blank node */
+  while ( cur ){
+    if(xmlIsBlankNode ( cur ) ){
+      cur = cur -> next;
+      continue;
+    }
+    if( !xmlStrcmp(cur->name, (const xmlChar *)"caCertsPath") ){
+      attrValue = xmlGetProp(cur, "value");
+      if(attrValue){
+	len = xmlStrlen(attrValue);
+	strncpy(caCertsPath, (char *)attrValue, len);
+	myKeyCertFile[len] = '\0';
+	printf("caCertsPath >>%s<<\n", caCertsPath);
+	xmlFree(attrValue);
+      }
+    }
+    else if( !xmlStrcmp(cur->name, (const xmlChar *)"privateKeyCertFile") ){	  
+      attrValue = xmlGetProp(cur, "value");
+      if(attrValue){
+	len = xmlStrlen(attrValue);
+	strncpy(myKeyCertFile, (char *)attrValue, len);
+	myKeyCertFile[len] = '\0';
+	printf("myKeyCertFile >>%s<<\n", myKeyCertFile);
+	xmlFree(attrValue);
+      }
+    }
+    cur = cur -> next;
+  }
   return 0;
 }
