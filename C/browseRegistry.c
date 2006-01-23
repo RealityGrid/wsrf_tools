@@ -48,6 +48,7 @@ int main(int argc, char **argv){
 	printf("Failed to get key passphrase from command line\n");
 	return 1;
       }
+      printf("\n");
 
       /* Finally, we can contact the registry */
       if(Get_registry_entries_secure(registryEPR, 
