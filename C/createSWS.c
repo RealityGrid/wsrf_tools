@@ -30,7 +30,7 @@ int main(int argc, char **argv){
   struct security_info sec;
 
   job.userName[0] = '\0';
-  sprintf(job.group, "RSS");
+  snprintf(job.group, REG_MAX_STRING_LENGTH, "RSS");
   job.software[0] = '\0';
   job.purpose[0] = '\0';
   job.inputFilename[0] = '\0';
@@ -39,19 +39,20 @@ int main(int argc, char **argv){
 
   if( (argc != 6) && (argc != 7) ){
     printf("Usage:\n  createSWS <address of registry>"
-	   " <lifetime (min)> <application> <purpose> <passphrase> [checkpoint EPR]\n");
+	   " <lifetime (min)> <application> <purpose> <passphrase>"
+	   " [checkpoint EPR]\n");
     return 1;
   }
 
-  strncpy(registryAddr, argv[1], MAX_LEN);
+  strncpy(registryAddr, argv[1], REG_MAX_STRING_LENGTH);
   sscanf(argv[2], "%d", &(job.lifetimeMinutes));
-  strncpy(job.software, argv[3], MAX_LEN);
-  strncpy(job.purpose, argv[4], 1024);
-  sprintf(job.userName, "%s", getenv("USER"));
-  strncpy(job.passphrase, argv[5], MAX_LEN);
+  strncpy(job.software, argv[3], REG_MAX_STRING_LENGTH);
+  strncpy(job.purpose, argv[4], REG_MAX_STRING_LENGTH);
+  snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
+  strncpy(job.passphrase, argv[5], REG_MAX_STRING_LENGTH);
 
   if(argc == 7){
-    strncpy(job.checkpointAddress, argv[6], MAX_LEN);
+    strncpy(job.checkpointAddress, argv[6], REG_MAX_STRING_LENGTH);
   }
 
   if(strstr(registryAddr, "https") == registryAddr){
@@ -61,7 +62,7 @@ int main(int argc, char **argv){
       printf("Failed to get security configuration\n");
       return 1;
     }
-    sprintf(job.userName, sec.userDN);
+    snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", sec.userDN);
 
     /* Now get the user's passphrase for their key */
     if( !(keyPassphrase = getpass("Enter passphrase for key: ")) ){
@@ -124,10 +125,10 @@ int main(int argc, char **argv){
 				keyPassphrase, sec.myKeyCertFile,
 				sec.caCertsPath);
   if(EPR){
-    printf("Address of SWS = %s\n", EPR);
+    printf("\nAddress of SWS = %s\n", EPR);
   }
   else{
-    printf("FAILED to create SWS :-(\n");
+    printf("\nFAILED to create SWS :-(\n");
   }
 	 
   return 0;
