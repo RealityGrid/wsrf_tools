@@ -3,14 +3,17 @@ include ${REG_STEER_HOME}/make/Makefile.${ARCH}
 
 
 INCLUDE_PATH = ${STEER_INCLUDES}
-#C_FLAGS = ${C_FLAGS} -DDEBUG
 LIB_FLAGS = securityUtils.o  ${STEER_LIBS} -lReG_Steer_Utils \
             -lReG_Steer ${STEER_LDFLAGS} 
 
 .SUFFIXES: .o .c
 
+# Have to make sure we define the REG_WITH_OPENSSL flag as set when
+# building library because these utilites use gSoap directly and
+# thus it is essential that WITH_OPENSSL is defined consistently.
 .c.o:
-	${CC} ${C_FLAGS} ${INCLUDE_PATH} -c $< -o $@
+	${CC} ${C_FLAGS} -DREG_WITH_OPENSSL=${REG_WITH_OPENSSL_FLAG} \
+${INCLUDE_PATH} -c $< -o $@
 
 TARGETS = addUser browseRegistry createSWS createVisSWS destroySWS \
           globalParamCreate getResourcePropertyDoc
