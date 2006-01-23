@@ -87,7 +87,7 @@ int getSecurityConfig(struct security_info *sec){
     }
   }
 
-  printf("User's DN >>%s<<\n", sec->userDN);
+  printf("User's DN >>%s<<\n\n", sec->userDN);
 
   return 0;
 }

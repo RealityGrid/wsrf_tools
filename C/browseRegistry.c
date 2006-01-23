@@ -24,6 +24,7 @@ int main(int argc, char **argv){
   struct registry_entry *entries;
   struct security_info   sec;
 
+  printf("\n");
   if(argc < 2 || argc > 3){
     printf("Usage:\n  browseRegistry <EPR of Registry "
 	   "(ServiceGroup)> [<pattern to filter on>]\n");

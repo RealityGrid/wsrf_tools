@@ -18,12 +18,14 @@ int main(int argc, char **argv){
 	   "http://localhost:5000/854884847 \"\" \n\n");
     return 1;
   }
+  printf("\n");
 
   for(i=1; i<argc; i+=2){
     if(Destroy_WSRP(argv[i], getenv("USER"), argv[i+1]) == REG_SUCCESS){
       printf("Destroyed %s\n", argv[i]);
     }
   }
+  printf("\n");
 	 
   return 0;
 }
