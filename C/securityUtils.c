@@ -50,7 +50,7 @@ int getSecurityConfig(struct security_info *sec){
       if(attrValue){
 	len = xmlStrlen(attrValue);
 	strncpy(sec->caCertsPath, (char *)attrValue, len);
-	sec->myKeyCertFile[len] = '\0';
+	sec->caCertsPath[len] = '\0';
 	printf("caCertsPath >>%s<<\n", sec->caCertsPath);
 	xmlFree(attrValue);
       }
