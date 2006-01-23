@@ -5,6 +5,7 @@
 #include "ReG_Steer_Browser.h"
 #include "ReG_Steer_Steerside_WSRF.h"
 #include "ReG_Steer_Utils.h"
+#include "ReG_Steer_Utils_WSRF.h"
 #include "soapH.h"
 #include "securityUtils.h"
 
@@ -24,7 +25,7 @@ int main(int argc, char **argv){
   char *EPR;
   char *ioTypes;
   char *passPtr;
-  char *keyPassphrase;
+  char  keyPassphrase[REG_MAX_STRING_LENGTH];
   struct soap mySoap;
   struct wsrp__SetResourcePropertiesResponse response;
   struct msg_struct *msg;
@@ -52,13 +53,13 @@ int main(int argc, char **argv){
     return 1;
   }
 
-  strncpy(registryAddr, argv[1], 256);
+  strncpy(registryAddr, argv[1], REG_MAX_STRING_LENGTH);
   sscanf(argv[2], "%d", &(job.lifetimeMinutes));
-  strncpy(job.software, argv[3], 256);
-  strncpy(job.purpose, argv[4], 1024);
-  strncpy(job.passphrase, argv[5], 256);
-  sprintf(job.userName, "%s", getenv("USER"));
-
+  strncpy(job.software, argv[3], REG_MAX_STRING_LENGTH);
+  strncpy(job.purpose, argv[4], REG_MAX_STRING_LENGTH);
+  strncpy(job.passphrase, argv[5], REG_MAX_STRING_LENGTH);
+  snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
+  memset(keyPassphrase, '\0', REG_MAX_STRING_LENGTH);
   if(strstr(registryAddr, "https") == registryAddr){
 
     /* Read the location of certs etc. into global variables */
@@ -66,21 +67,27 @@ int main(int argc, char **argv){
       printf("Failed to get security configuration\n");
       return 1;
     }
-    sprintf(job.userName, sec.userDN);
+    snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", sec.userDN);
 
     /* Now get the user's passphrase for their key */
-    if( !(keyPassphrase = getpass("Enter passphrase for key: ")) ){
+    if( !(passPtr = getpass("Enter passphrase for key: ")) ){
 
       printf("Failed to get key passphrase from command line\n");
       return 1;
     }
+    snprintf(keyPassphrase, REG_MAX_STRING_LENGTH, "%s", passPtr);
   }
+  printf("\n");
 
   /* Get the list of available Containers and ask the user to 
      choose one */
-  if(Get_registry_entries_filtered(registryAddr, &num_entries,  
-				   &entries, 
-				   "Container registry") != REG_SUCCESS){
+  if(Get_registry_entries_filtered_secure(registryAddr, 
+					  keyPassphrase,
+					  sec.myKeyCertFile, 
+					  sec.caCertsPath,  
+					  &num_entries,  
+					  &entries, 
+					  "Container registry") != REG_SUCCESS){
     fprintf(stderr, 
 	    "Search for registry of available containers failed\n");
     return 1;
@@ -94,8 +101,12 @@ int main(int argc, char **argv){
 
   strcpy(containerAddr, entries[0].gsh);
   free(entries);
-  if(Get_registry_entries_filtered(containerAddr, &num_entries,  
-				   &entries, "Container") != REG_SUCCESS){
+  if(Get_registry_entries_filtered_secure(containerAddr,
+ 					  keyPassphrase,
+					  sec.myKeyCertFile, 
+					  sec.caCertsPath,  
+					  &num_entries,  
+					  &entries, "Container") != REG_SUCCESS){
     fprintf(stderr, "Search for available containers failed\n");
     return 1;
   }
@@ -122,9 +133,13 @@ int main(int argc, char **argv){
 
   /* Look for available SWSs and get user to choose which one to
      use as a data source */
-  if(Get_registry_entries_filtered(registryAddr, &num_entries,  
-				   &entries,
-				   "SWS") != REG_SUCCESS){
+  if(Get_registry_entries_filtered_secure(registryAddr,
+					  keyPassphrase,
+					  sec.myKeyCertFile, 
+					  sec.caCertsPath,  
+					  &num_entries,  
+					  &entries,
+					  "SWS") != REG_SUCCESS){
     fprintf(stderr, "\nNo jobs to use as data source found in registry!\n");
     return 1;
   }
@@ -227,7 +242,6 @@ int main(int argc, char **argv){
   Delete_msg_struct(&msg);
 
   /* Now create SWS for the vis */
-
   if( !(EPR = Create_steering_service(&job, containerAddr, 
 				      registryAddr,
 				      keyPassphrase, 
@@ -237,7 +251,7 @@ int main(int argc, char **argv){
     return 1;
   }
 
-  fprintf(stdout, "Address of SWS = %s\n", EPR);
+  fprintf(stdout, "\nAddress of SWS = %s\n", EPR);
 
   /* Finally, set it up with information on the data source*/
 
@@ -253,6 +267,15 @@ int main(int argc, char **argv){
 					   "", buf, &response) != SOAP_OK){
     soap_print_fault(&mySoap, stderr);
     fprintf(stderr, "Failed to initialize SWS with info. on data source :-(");
+
+    if(Destroy_WSRP(EPR, job.userName, job.passphrase) == REG_SUCCESS){
+      fprintf(stderr, "  => Destroyed %s\n", EPR);
+    }
+    else{
+      fprintf(stderr, "Also failed to clean-up the SWS %s\n", EPR);
+    }
+    soap_end(&mySoap);
+    soap_done(&mySoap);
     return 1;
   }
 
