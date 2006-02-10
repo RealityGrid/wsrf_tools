@@ -6,11 +6,11 @@
 #include "ReG_Steer_Utils.h"
 #include <unistd.h>
 #include "signal.h"
-
+/*
 #include "libxml/xmlmemory.h"
 #include "libxml/parser.h"
 #include "securityUtils.h"
-
+*/
 /*------------------------------------------------------------*/
 
 void sigpipe_handle(int x) { }
@@ -22,12 +22,13 @@ int main(int argc, char **argv){
   int    i, input;
   int    num_entries;
   struct registry_entry *entries;
-  char  containerAddr[MAX_LEN];
-  char  registryAddr[MAX_LEN];
+  char  confFile[REG_MAX_STRING_LENGTH];
+  char  containerAddr[REG_MAX_STRING_LENGTH];
+  char  registryAddr[REG_MAX_STRING_LENGTH];
   char *EPR;
   char *keyPassphrase = NULL;
-  struct job_details job;
-  struct security_info sec;
+  struct reg_job_details job;
+  struct reg_security_info sec;
 
   job.userName[0] = '\0';
   snprintf(job.group, REG_MAX_STRING_LENGTH, "RSS");
@@ -57,8 +58,11 @@ int main(int argc, char **argv){
 
   if(strstr(registryAddr, "https") == registryAddr){
 
+    snprintf(confFile, REG_MAX_STRING_LENGTH, 
+	     "%s/RealityGrid/etc/security.conf", getenv("HOME"));
+
     /* Read the location of certs etc. into global variables */
-    if(getSecurityConfig(&sec)){
+    if(Get_security_config(confFile, &sec) != REG_SUCCESS){
       printf("Failed to get security configuration\n");
       return 1;
     }

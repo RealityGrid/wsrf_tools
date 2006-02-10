@@ -7,7 +7,6 @@
 #include "ReG_Steer_Utils.h"
 #include "ReG_Steer_Utils_WSRF.h"
 #include "soapH.h"
-#include "securityUtils.h"
 
 /*------------------------------------------------------------*/
 
@@ -25,6 +24,7 @@ int main(int argc, char **argv){
   char *EPR;
   char *ioTypes;
   char *passPtr;
+  char  confFile[REG_MAX_STRING_LENGTH];
   char  keyPassphrase[REG_MAX_STRING_LENGTH];
   struct soap mySoap;
   struct wsrp__SetResourcePropertiesResponse response;
@@ -36,8 +36,8 @@ int main(int argc, char **argv){
   int                    i, count;
   int                    num_entries;
   struct registry_entry *entries;
-  struct job_details     job;
-  struct security_info   sec;
+  struct reg_job_details     job;
+  struct reg_security_info   sec;
 
   job.userName[0] = '\0';
   sprintf(job.group, "RSS");
@@ -62,8 +62,11 @@ int main(int argc, char **argv){
   memset(keyPassphrase, '\0', REG_MAX_STRING_LENGTH);
   if(strstr(registryAddr, "https") == registryAddr){
 
+    snprintf(confFile, REG_MAX_STRING_LENGTH, 
+	     "%s/RealityGrid/etc/security.conf", getenv("HOME"));
+
     /* Read the location of certs etc. into global variables */
-    if(getSecurityConfig(&sec)){
+    if(Get_security_config(confFile, &sec)){
       printf("Failed to get security configuration\n");
       return 1;
     }
