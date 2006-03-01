@@ -8,6 +8,7 @@ use strict;
 use SOAP::Lite +trace =>  debug => sub {};
 #use SOAP::Lite;
 use WSRF::Lite +trace => debug => sub{};
+use ReG_Utils;
 
 #need to point to users certificates - these are only used
 #if https protocal is being used.
@@ -42,7 +43,8 @@ my $ans=  SOAP::Lite
          -> createServiceGroup($containerPassphrase);
 
 if ($ans->fault) {  
-    die "CREATE ERROR:: ".$ans->faultcode." ".$ans->faultstring."\n"; 
+    die "CREATE ERROR:: ".$ans->faultcode." ".$ans->faultstring.
+	" ".$ans->faultdetail."\n"; 
 }
 
 #Check we that got a WS-Address EndPoint back
@@ -71,7 +73,7 @@ if(defined $ENV{HTTPS_CERT_FILE}){
     open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) || die("can't open your cert. file: $!");
     my @lines = <CERT_FILE>;
     close(CERT_FILE);
-    my $DN="";
+    $DN="";
     foreach my $line (@lines){
 
 	if($line =~ m/^subject=/){
@@ -120,11 +122,22 @@ foreach my $container (@containers){
 </Content>
 EOF
 
-    my $ans = WSRF::Lite
-	-> uri($uri)
-	-> wsaddress(WSRF::WS_Address->new()->Address($containerRegistryAddress))
-	-> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
-
+    my $ans;
+    if(index($containerRegistryAddress, "https://") == -1){
+        # Make sure we use WSSE if not using SSL
+	my $hdr = ReG_Utils::makeWSSEHeader($DN, $containerPassphrase);
+	$ans = WSRF::Lite
+	    -> uri($uri)
+	    -> wsaddress(WSRF::WS_Address->new()->Address($containerRegistryAddress))
+	    -> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
+		   SOAP::Data->value($StuffToAdd)->type('xml'));  
+    }
+    else{
+	$ans = WSRF::Lite
+	    -> uri($uri)
+	    -> wsaddress(WSRF::WS_Address->new()->Address($containerRegistryAddress))
+	    -> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
+    }
     #Check we got a WS-Address EndPoint back
     die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
        
@@ -142,7 +155,8 @@ $ans=  SOAP::Lite
          -> createServiceGroup($containerPassphrase);
 
 if ($ans->fault) {  
-    die "CREATE ERROR:: ".$ans->faultcode." ".$ans->faultstring."\n"; 
+    die "Failed to create top-level registry: ERROR: ".
+	$ans->faultcode." ".$ans->faultstring."\n"; 
 }
 
 #Check we that got a WS-Address EndPoint back
@@ -181,10 +195,21 @@ my $StuffToAdd = <<EOF;
 </Content>
 EOF
 
-$ans = WSRF::Lite
-	-> uri($uri)
-	-> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
-	-> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
+    if(index($containerRegistryAddress, "https://") == -1){
+        # Make sure we use WSSE if not using SSL
+	my $hdr = ReG_Utils::makeWSSEHeader($DN, $containerPassphrase);
+	$ans = WSRF::Lite
+	    -> uri($uri)
+	    -> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
+	    -> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
+		   SOAP::Data->value($StuffToAdd)->type('xml'));  
+    }
+    else{
+	$ans = WSRF::Lite
+	    -> uri($uri)
+	    -> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
+	    -> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
+    }
 
 #Check we got a WS-Address EndPoint back
 die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
