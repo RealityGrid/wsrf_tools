@@ -1,7 +1,3 @@
-#! /usr/bin/env perl
-#BEGIN {
-#    @INC = ( @INC, "/usr/local/WSRF-Lite");
-#};
 
 package ReG_Utils;
 
@@ -49,6 +45,32 @@ sub makeWSSEHeader {
                                                            $nonceData,
                                                            $created));
     return $hdr1;
+}
+
+#----------------------------------------------------
+
+sub getUsername {
+
+    my $DN="";
+    if( open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) ){
+	my @lines = <CERT_FILE>;
+	close(CERT_FILE);
+
+	foreach my $line (@lines){
+
+	    if($line =~ m/^subject=/){
+		chomp($line);
+		$line =~ s/^subject=//o;
+		$DN = $line;
+		last;
+	    }
+	}
+    }
+    else{
+	$DN = $ENV{'USER'};
+    }
+    print "Your DN = $DN\n";
+    return $DN;
 }
 
 1;
