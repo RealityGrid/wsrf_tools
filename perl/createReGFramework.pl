@@ -221,6 +221,7 @@ open(EPR_FILE, "> reg_registry_info.sh") || die("can't open datafile: $!");
 
 print EPR_FILE "#!/bin/sh\n";
 print EPR_FILE "export REG_REGISTRY_EPR=$topLevelRegistryAddress\n";
+print EPR_FILE "export REG_REGISTRY_PASSPHRASE=$containerPassphrase\n";
 
 close(EPR_FILE);
 
