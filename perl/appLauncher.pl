@@ -7,8 +7,7 @@ BEGIN {
 use LWP::Simple;
 #use WSRF::Lite +trace =>  debug => sub {};
 use WSRF::Lite;
-use MIME::Base64;
-use Digest::SHA1 qw(sha1 sha1_hex sha1_base64);;
+use ReG_Utils;
 use strict;
 
 #need to point to user's certificates - these are only used
@@ -34,15 +33,25 @@ if( @ARGV == 1 )
 # Read handle of registry from file
 
 open(GSH_FILE, "reg_registry_info.sh") || die("can't open datafile: $!");
-# Read two lines and then get the text after the '=' character
-my $line_text = <GSH_FILE>;
-$line_text = <GSH_FILE>;
+# Read the details of the registry to use
+my $registry_EPR = "";
+my $registry_passphrase = "";
+while( (my $line_text = <GSH_FILE>) ){
+    chomp $line_text;
+    next if( $line_text =~ m/^\#/ );
+    if( index($line_text, "REG_REGISTRY_EPR") > -1){
+	my @item_arr = split(/=/, $line_text);
+	$registry_EPR = $item_arr[1];
+    }
+    elsif( index($line_text, "REG_REGISTRY_PASSPHRASE") > -1){
+	my @item_arr = split(/=/, $line_text);
+	$registry_passphrase = $item_arr[1];
+    }
+}
 close(GSH_FILE);
 
-my @item_arr = split(/=/, $line_text);
-my $registry_EPR = $item_arr[1];
-
-print "\nRegistry EPR = $registry_EPR\n";
+print "\nRegistry EPR = $registry_EPR\n".
+      "Registry_passphrase = $registry_passphrase\n";
 
 #----------------------------------------------------------------------
 # Read list of available containers
@@ -128,19 +137,22 @@ print "\n";
 #my $passphrase = "somethingcunning";
 
 #subject=DN
-
-open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) || die("can't open your cert. file: $!");
-my @lines = <CERT_FILE>;
-close(CERT_FILE);
 my $DN="";
-foreach my $line (@lines){
-
-    if($line =~ m/^subject=/){
-	chomp($line);
-	$line =~ s/^subject=//o;
-	$DN = $line;
-	last;
+if( open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) ){
+    my @lines = <CERT_FILE>;
+    close(CERT_FILE);
+    foreach my $line (@lines){
+	
+	if($line =~ m/^subject=/){
+	    chomp($line);
+	    $line =~ s/^subject=//o;
+	    $DN = $line;
+	    last;
+	}
     }
+}
+else{
+    $DN = $ENV{'USER'};
 }
 print "Your DN = $DN\n";
 
@@ -187,10 +199,7 @@ print "Calling createSWSResource on $target...\n";
 my $ans =  WSRF::Lite
          -> uri($uri)
          -> wsaddress(WSRF::WS_Address->new()->Address($target)) #location of service
-         -> createSWSResource($timeToLive, $registry_EPR, 
-#			      SOAP::Data->value($job_description)->type('string'), 
-			      $chkEPR,
-			      $passphrase);
+         -> createSWSResource($timeToLive, $chkEPR, $passphrase);
 
 die "createSWSResource call did not return anything" if !defined($ans);
 
@@ -214,35 +223,42 @@ $job_description = $location . $job_description . "</Content>";
 
 print "Arg to Add call is >>$job_description<<\n";
 
-# $@ is syntax error from last eval (null if none)
 my $locator = "";
-eval{ $ans =  WSRF::Lite
-	  -> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
-	  -> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
-	  -> Add(SOAP::Data->value($job_description)->type('xml')); 
-};
-if( $@ ){
-    warn $@;
-} else {
-	  
-    if ($ans->fault) {  
-	warn "Failed to register SWS: ".$ans->faultcode." ".
-	    $ans->faultstring."\n"; 
-    }
 
-    #The Add operation returns a WS-Address (within a SOM object).
-    #This EPR is of the ServiceGroupEntry that models the entry you
-    #have just created - destroy the ServiceGroupEntry and the entry
-    #will disappear from the ServiceGroup. You also control the
-    #lifetime of the entry using the ServiceGroupEntry - using
-    #SetTerminationTime on it.
-
-    $locator = $ans->valueof('//AddResponse/EndpointReference/Address') or 
-	warn "init: Service registration error: No Endpoint returned\n";
-
-    print "Call to Add returned:\n";
-    print "      serviceEntry locator = $locator\n";
+if(index($registry_EPR, "https://") == -1){
+    # Make sure we use WSSE if not using SSL
+    my $hdr = ReG_Utils::makeWSSEHeader($DN, $registry_passphrase);
+    $ans = WSRF::Lite
+	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
+	-> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
+	       SOAP::Data->value($job_description)->type('xml'));  
 }
+else{
+    $ans =  WSRF::Lite
+	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
+	-> Add(SOAP::Data->value($job_description)->type('xml')); 
+}
+	  
+if ($ans->fault) {  
+    warn "Failed to register SWS: ".$ans->faultcode." ".
+	$ans->faultstring."\n"; 
+}
+
+#The Add operation returns a WS-Address (within a SOM object).
+#This EPR is of the ServiceGroupEntry that models the entry you
+#have just created - destroy the ServiceGroupEntry and the entry
+#will disappear from the ServiceGroup. You also control the
+#lifetime of the entry using the ServiceGroupEntry - using
+#SetTerminationTime on it.
+
+$locator = $ans->valueof('//AddResponse/EndpointReference/Address') or 
+    warn "Service registration error: No Endpoint returned\n";
+
+print "Call to Add returned:\n";
+print "      serviceEntry locator = $locator\n";
+
 
 #---------------------------------------------------------------------
 # Supply location of ServiceGroupEntry, ServiceGroup, content of input file & 
@@ -276,38 +292,12 @@ if($locator){
 }
 $content .= "</wsrp:Insert>";
 
-#print "uri     = $uri\n";
-#print "target  = $target\n";
-#print "content = >>$content<<\n";
-
-# seed the random number generator
-srand (time ^ $$ ^ unpack "%L*", `ps axww | gzip`);
-my $num = rand 1000000;
-
-my $nonce = encode_base64("$num", "");
-
-# Set earlier...
-my $passwd = $passphrase;
-
-# Password digest = Base64( SHA-1(nonce + created + password) )
-# (You should see the C code for doing this!)
-my $digest = sha1_base64($nonce . $launch_time . $passwd);
-
-my $user = SOAP::Data->name('wsse:Username' => 'Andy_Porter');
-my $passData = SOAP::Data->name('wsse:Password' => $digest);
-my $nonceData = SOAP::Data->name('wsse:Nonce' => $nonce);
-my $created = SOAP::Data->name('wsse:Created' => $launch_time);
-
-my $hdr1 = SOAP::Data->new(name => 'wsse:UsernameToken', 
-			     value => \SOAP::Data->value($user,
-							 $passData,
-							 $nonceData,
-							 $created));
+my $hdr = ReG_Utils::makeWSSEHeader($DN, $passphrase);
 
 my $ans =  WSRF::Lite
     -> uri($uri)
     -> wsaddress(WSRF::WS_Address->new()->Address($target))
-    -> SetResourceProperties( SOAP::Header->name('wsse:Security')->value(\$hdr1),
+    -> SetResourceProperties( SOAP::Header->name('wsse:Security')->value(\$hdr),
 			      SOAP::Data->value( $content )->type( 'xml' ) );
 
 if($ans && $ans->fault){
@@ -322,5 +312,6 @@ open(GSH_FILE, "> reg_app_info.sh") || die("can't open datafile: $!");
 
 print GSH_FILE "#!/bin/sh\n";
 print GSH_FILE "export REG_SGS_ADDRESS=$target\n";
+print GSH_FILE "export REG_PASSPHRASE=$passphrase\n";
 
 close(GSH_FILE);
