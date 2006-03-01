@@ -6,6 +6,8 @@ BEGIN {
 
 #use WSRF::Lite +trace =>  debug => sub {};
 use WSRF::Lite;
+use ReG_Utils;
+use strict;
 
 #need to point to users certificates - these are only used
 #if https protocal is being used.
@@ -22,26 +24,39 @@ if( @ARGV != 1 )
   exit;
 }
 
-
 #get the location of the service
-$target = shift @ARGV;
+my $target = shift @ARGV;
+my $ans;
 
-$ans=  WSRF::Lite
-       -> uri($WSRF::Constants::WSRL)
-       -> wsaddress(WSRF::WS_Address->new()->Address($target))  
-       -> Detach();
+if(index($target, "https://") == -1){
+    print "Enter passphrase for service (if any): ";
+    my $passphrase = <STDIN>;
+    chomp($passphrase);
+    print "\n";
+
+    my $DN = ReG_Utils::getUsername();
+    my $hdr = ReG_Utils::makeWSSEHeader($DN, $passphrase);
+
+    $ans=  WSRF::Lite
+	-> uri($WSRF::Constants::WSRL)
+	-> wsaddress(WSRF::WS_Address->new()->Address($target))  
+	-> Detach(SOAP::Header->name('wsse:Security')->value(\$hdr));
+}
+else{
+    $ans=  WSRF::Lite
+	-> uri($WSRF::Constants::WSRL)
+	-> wsaddress(WSRF::WS_Address->new()->Address($target))  
+	-> Detach();
+}
 
 # check what we got back from the service - if it is a
 # simple variable print it elsif it is a Reference to
 # an ARRAY iterate through it and print the values
-if ( $ans->fault)
-{
+if ( $ans->fault){
   print $ans->faultcode, " ", $ans->faultstring, "\n";
+  print "Error description: ".$ans->valueof("//Description")."\n";
 }
-else
-{
-   print "\nResult= ".$ans->result." Detached\n";
-   
+else{
+   print "\nResult= ".$ans->result." Detached\n";   
 }
-
 print "\n";
