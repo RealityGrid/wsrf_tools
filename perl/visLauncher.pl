@@ -11,8 +11,7 @@ use LWP::Simple;
 use WSRF::Lite;
 use SOAP::Lite;
 use XML::DOM;
-use MIME::Base64;
-use Digest::SHA1 qw(sha1 sha1_hex sha1_base64);;
+use ReG_Utils;
 use strict;
 
 #need to point to user's certificates - these are only used
@@ -31,14 +30,25 @@ if( @ARGV != 0  )
 # Read handle of registry from file
 
 open(GSH_FILE, "reg_registry_info.sh") || die("can't open datafile: $!");
-my $line_text = <GSH_FILE>;
-$line_text = <GSH_FILE>;
+# Read the details of the registry to use
+my $registry_EPR = "";
+my $registry_passphrase = "";
+while( (my $line_text = <GSH_FILE>) ){
+    chomp $line_text;
+    next if( $line_text =~ m/^\#/ );
+    if( index($line_text, "REG_REGISTRY_EPR") > -1){
+	my @item_arr = split(/=/, $line_text);
+	$registry_EPR = $item_arr[1];
+    }
+    elsif( index($line_text, "REG_REGISTRY_PASSPHRASE") > -1){
+	my @item_arr = split(/=/, $line_text);
+	$registry_passphrase = $item_arr[1];
+    }
+}
 close(GSH_FILE);
 
-my @item_arr = split(/=/, $line_text);
-my $registry_EPR = $item_arr[1];
-
-print "Registry EPR = $registry_EPR\n";
+print "\nRegistry EPR = $registry_EPR\n".
+      "Registry_passphrase = $registry_passphrase\n";
 
 #----------------------------------------------------------------------
 # Read list of available containers
@@ -52,13 +62,28 @@ for(my $i=0; $i<@{containers}; $i++){
     $containers[$i] =~ s/\n//og;
 }
 
+#----------------------------------------------------------------------
+my $DN= ReG_Utils::getUsername();
+
 #------------------------------------------------------------------------
 # Query Registry for SWSs
 
-my $ans=  WSRF::Lite
-       -> uri("http://sve.man.ac.uk/regServiceGroup")
-       -> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
-       -> GetResourceProperty( SOAP::Data->value("Entry")->type('xml') ); 
+my $ans;
+if(index($registry_EPR, "https://") == -1){
+    # Make sure we use WSSE if not using SSL
+    my $hdr = ReG_Utils::makeWSSEHeader($DN, $registry_passphrase);
+    $ans = WSRF::Lite
+	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
+	-> GetResourceProperty(SOAP::Header->name('wsse:Security')->value(\$hdr),
+			       SOAP::Data->value("Entry")->type('xml') ); 
+}
+else{
+    $ans =  WSRF::Lite
+	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
+	-> GetResourceProperty( SOAP::Data->value("Entry")->type('xml') ); 
+}
 
 if ($ans->fault) {  die "GetResourceProperty ERROR:: ".
 			$ans->faultcode." ".$ans->faultstring."\n"; }
@@ -105,37 +130,11 @@ my $passphrase = <STDIN>;
 chomp($passphrase);
 print "\n";
 
-# Create WSSE header...
-
-# seed the random number generator
-srand (time ^ $$ ^ unpack "%L*", `ps axww | gzip`);
-my $num = rand 1000000;
-
-my $nonce = encode_base64("$num", "");
-
-my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
-# month returned by localtime is zero-indexed and we need to convert to
-# a four-digit date...
-my $created = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
-                     $year+1900,$mon+1,$mday,$hour,$min,$sec;
-# Password digest = Base64( SHA-1(nonce + created + password) )
-my $digest = sha1_base64($nonce . $created . $passphrase);
-
-my $user = SOAP::Data->name('wsse:Username' => $ENV{'USER'});
-my $passwd = SOAP::Data->name('wsse:Password' => $digest);
-my $nonce = SOAP::Data->name('wsse:Nonce' => $nonce);
-my $created = SOAP::Data->name('wsse:Created' => $created);
-
-my $hdr1 = SOAP::Data->new(name => 'wsse:UsernameToken', 
-			   value => \SOAP::Data->value($user,
-						       $passwd,
-						       $nonce,
-						       $created));
-# Now make the call itself...
+my $hdr = ReG_Utils::makeWSSEHeader($ENV{'USER'}, $passphrase);
 $ans=  WSRF::Lite
        -> uri($WSRF::Constants::WSRP)
        -> wsaddress(WSRF::WS_Address->new()->Address($app_SWS_EPR))
-       -> GetResourceProperty(SOAP::Header->name('wsse:Security')->value(\$hdr1),
+       -> GetResourceProperty(SOAP::Header->name('wsse:Security')->value(\$hdr),
 			      SOAP::Data->value("ioTypeDefinitions")->type('xml') ); 
 
 if ($ans->fault) {  die "GetResourceProperty ERROR:: ".
@@ -211,6 +210,8 @@ my $username = $ENV{'USER'};
 # Virtual Organisation of user
 my $virt_org = "SVE Group";
 
+# Get the time and date
+my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime( time() );
 # month returned by localtime is zero-indexed and we need to convert to
 # a four-digit date...
 my $launch_time = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
@@ -250,8 +251,7 @@ my $uri = "http://www.sve.man.ac.uk/SWSFactory";
 my $ans =  WSRF::Lite
          -> uri($uri)
          -> wsaddress(WSRF::WS_Address->new()->Address($target)) #location of service
-         -> createSWSResource($timeToLive, $registry_EPR, 
-			      #SOAP::Data->value($content)->type('string'),
+         -> createSWSResource($timeToLive, 
 			      "", $passphrase);
 
 if ($ans->fault) {  die "CREATE ERROR:: ".$ans->faultcode." ".
@@ -266,21 +266,6 @@ my $vis_SWS_EPR = $ans->valueof('//Body//Address') or
 
 my $location = "<MemberEPR><wsa:Address>".$vis_SWS_EPR.
     "</wsa:Address></MemberEPR>\n<Content>";
-
-open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) || die("can't open your cert. file: $!");
-my @lines = <CERT_FILE>;
-close(CERT_FILE);
-my $DN="";
-foreach my $line (@lines){
-
-    if($line =~ m/^subject=/){
-	chomp($line);
-	$line =~ s/^subject=//o;
-	$DN = $line;
-	last;
-    }
-}
-print "Your DN = $DN\n";
 
 my $content =  <<EOF;
 <registryEntry>
@@ -307,57 +292,42 @@ print "Arg to Add call is >>$content<<\n";
 # This call uses SSL rather than WSSE for authentication
 # $@ is syntax error from last eval (null if none)
 my $locator = "";
-eval{ $ans =  WSRF::Lite
-	  -> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
-	  -> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
-	  -> Add(SOAP::Data->value($content)->type('xml')); 
-};
-if( $@ ){
-    warn $@;
-} else {
-	  
-    if ($ans->fault) {  
-	warn "Failed to register SWS: ".$ans->faultcode." ".
-	    $ans->faultstring."\n"; 
-    }
-
-    #The Add operation returns a WS-Address (within a SOM object).
-    #This EPR is of the ServiceGroupEntry that models the entry you
-    #have just created - destroy the ServiceGroupEntry and the entry
-    #will disappear from the ServiceGroup. You also control the
-    #lifetime of the entry using the ServiceGroupEntry - using
-    #SetTerminationTime on it.
-
-    $locator = $ans->valueof('//AddResponse/EndpointReference/Address') or 
-	warn "Service registration error: No Endpoint returned\n";
-
-    print "Call to Add returned locator = $locator\n";
+if(index($registry_EPR, "https://") == -1){
+    # Make sure we use WSSE if not using SSL
+    my $hdr = ReG_Utils::makeWSSEHeader($DN, $registry_passphrase);
+    $ans =  WSRF::Lite
+	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
+	-> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
+	       SOAP::Data->value($content)->type('xml')); 
 }
+else{
+    $ans =  WSRF::Lite
+	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
+	-> Add(SOAP::Data->value($content)->type('xml')); 
+}
+
+if ($ans->fault) {  
+    warn "Failed to register SWS: ".$ans->faultcode." ".
+	$ans->faultstring."\n"; 
+}
+
+#The Add operation returns a WS-Address (within a SOM object).
+#This EPR is of the ServiceGroupEntry that models the entry you
+#have just created - destroy the ServiceGroupEntry and the entry
+#will disappear from the ServiceGroup. You also control the
+#lifetime of the entry using the ServiceGroupEntry - using
+#SetTerminationTime on it.
+
+$locator = $ans->valueof('//AddResponse/EndpointReference/Address') or 
+    warn "Service registration error: No Endpoint returned\n";
+
+print "Call to Add returned locator = $locator\n";
+
 
 #-------------------------------------------------------------------------
 # Set-up Vis. SWS with data sources & max. run time
-
-# Another WSSE header needed...
-$nonce = encode_base64("$num", "");
-
-($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
-# month returned by localtime is zero-indexed and we need to convert to
-# a four-digit date...
-$created = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
-                   $year+1900,$mon+1,$mday,$hour,$min,$sec;
-# Password digest = Base64( SHA-1(nonce + created + password) )
-$digest = sha1_base64($nonce . $created . $passphrase);
-
-$user = SOAP::Data->name('wsse:Username' => $ENV{'USER'});
-$passwd = SOAP::Data->name('wsse:Password' => $digest);
-$nonce = SOAP::Data->name('wsse:Nonce' => $nonce);
-$created = SOAP::Data->name('wsse:Created' => $created);
-
-$hdr1 = SOAP::Data->new(name => 'wsse:UsernameToken', 
-			value => \SOAP::Data->value($user,
-						    $passwd,
-						    $nonce,
-						    $created));
 
 my $dataSources = "<dataSource>
 <sourceEPR>" . $app_SWS_EPR . "</sourceEPR>
@@ -379,10 +349,12 @@ if($locator){
 }
 $arg .= "</wsrp:Insert>";
 
+my $hdr = ReG_Utils::makeWSSEHeader($DN, $passphrase);
+
 my $ans =  WSRF::Lite
     -> uri($WSRF::Constants::WSRP)
     -> wsaddress(WSRF::WS_Address->new()->Address($vis_SWS_EPR))
-    -> SetResourceProperties( SOAP::Header->name('wsse:Security')->value(\$hdr1),
+    -> SetResourceProperties( SOAP::Header->name('wsse:Security')->value(\$hdr),
 			      SOAP::Data->value( $arg )->type( 'xml' ) );
 
 if($ans->fault){ die "SetResourceProperties ERROR:: ".$ans->faultcode." ".
@@ -398,6 +370,7 @@ my $file = "reg_viz_info.sh";
 open(GSH_FILE, "> $file") || die("can't open datafile: $!");
 print GSH_FILE "#!/bin/sh\n";
 print GSH_FILE "export REG_SGS_ADDRESS=$vis_SWS_EPR\n";
+print GSH_FILE "export REG_PASSPHRASE=$passphrase\n";
 close(GSH_FILE);
 
 #--------------------------------------------------

@@ -8,9 +8,7 @@ use SOAP::Lite +trace =>  debug => sub {};
 #use SOAP::Lite;
 use WSRF::Lite +trace =>  debug => sub {};
 #use WSRF::Lite;
-use MIME::Base64;
-use Digest::SHA1 qw(sha1 sha1_hex sha1_base64);;
-
+use ReG_Utils;
 use strict;
 
 #need to point to users certificates - these are only used
@@ -26,6 +24,7 @@ if ( @ARGV < 1 || @ARGV > 2 )
  exit;
 }
 
+my $DN= ReG_Utils::getUsername();
 
 # get the location of the service
 my $target = shift @ARGV;
@@ -41,39 +40,12 @@ my $ans;
 
 if(defined $passwd){
     # Create WSSE header...
+    my $hdr = ReG_Utils::makeWSSEHeader($DN, $passwd);
 
-    # seed the random number generator
-    srand (time ^ $$ ^ unpack "%L*", `ps axww | gzip`);
-    my $num = rand 1000000;
-    my $nonce = encode_base64("$num", "");
-
-    #my $DN = "/C=UK/O=eScience/OU=Manchester/L=MC/CN=andrew porter";
-
-    # Get the time and date
-    my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
-    # month returned by localtime is zero-indexed and we need to convert to
-    # a four-digit date...
-    my $launch_time = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
-                           $year+1900,$mon+1,$mday,$hour,$min,$sec;
-
-    # Password digest = Base64( SHA-1(nonce + created + password) )
-    # (You should see the C code for doing this!)
-    my $digest = sha1_base64($nonce . $launch_time . $passwd);
-
-    my $user = SOAP::Data->name('wsse:Username' => $ENV{USER});
-    my $passData = SOAP::Data->name('wsse:Password' => $digest);
-    my $nonceData = SOAP::Data->name('wsse:Nonce' => $nonce);
-    my $created = SOAP::Data->name('wsse:Created' => $launch_time);
-
-    my $hdr1 = SOAP::Data->new(name => 'wsse:UsernameToken',
-			       value => \SOAP::Data->value($user,
-							   $passData,
-							   $nonceData,
-							   $created));
     $ans =  WSRF::Lite
 	-> uri($uri)
 	-> wsaddress(WSRF::WS_Address->new()->Address($target))
-	-> $func(SOAP::Header->name('wsse:Security')->value(\$hdr1),
+	-> $func(SOAP::Header->name('wsse:Security')->value(\$hdr),
 		 SOAP::Data->value($param)->type('xml') ); 
 }
 else{

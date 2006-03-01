@@ -134,27 +134,9 @@ print "Enter a passphrase to protect the SWS: ";
 my $passphrase = <STDIN>;
 chomp($passphrase);
 print "\n";
-#my $passphrase = "somethingcunning";
 
-#subject=DN
-my $DN="";
-if( open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) ){
-    my @lines = <CERT_FILE>;
-    close(CERT_FILE);
-    foreach my $line (@lines){
-	
-	if($line =~ m/^subject=/){
-	    chomp($line);
-	    $line =~ s/^subject=//o;
-	    $DN = $line;
-	    last;
-	}
-    }
-}
-else{
-    $DN = $ENV{'USER'};
-}
-print "Your DN = $DN\n";
+
+my $DN= ReG_Utils::getUsername();
 
 my $job_description = <<EOF;
 <registryEntry>
