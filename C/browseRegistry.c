@@ -18,11 +18,12 @@ void sigpipe_handle(int x) { }
 int main(int argc, char **argv){
 
   char   registryEPR[128];
+  char   securityConfigFile[REG_MAX_STRING_LENGTH];
   char  *passPtr;
   int    i;
   int    num_entries;
   struct registry_entry *entries;
-  struct security_info   sec;
+  struct reg_security_info   sec;
 
   printf("\n");
   if(argc < 2 || argc > 3){
@@ -31,13 +32,21 @@ int main(int argc, char **argv){
     return 1;
   }
   strncpy(registryEPR, argv[1], 128);
+  Wipe_security_info(&sec);
 
   if(argc != 3){
 
     if(strstr(registryEPR, "https") == registryEPR){
 
       /* Read the location of certs etc. into global variables */
-      if(getSecurityConfig(&sec)){
+      if( !(passPtr = getenv("HOME")) ){
+	fprintf(stderr, "Failed to get $HOME environment variable\n");
+	return 1;
+      }
+      snprintf(securityConfigFile, REG_MAX_STRING_LENGTH,
+	       "%s/RealityGrid/etc/security.conf", passPtr);
+
+      if(Get_security_config(securityConfigFile, &sec)){
 	printf("Failed to get security configuration\n");
 	return 1;
       }
@@ -49,12 +58,11 @@ int main(int argc, char **argv){
 	return 1;
       }
       printf("\n");
+      strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
 
       /* Finally, we can contact the registry */
-      if(Get_registry_entries_secure(registryEPR, 
-				     passPtr,
-				     sec.myKeyCertFile,
-				     sec.caCertsPath,
+      if(Get_registry_entries_secure(registryEPR,
+				     &sec, 
 				     &num_entries,  
 				     &entries) != REG_SUCCESS){
 	printf("Get_registry_entries_secure failed\n");
@@ -62,7 +70,22 @@ int main(int argc, char **argv){
       }
     }
     else{
-      if(Get_registry_entries_secure(registryEPR, "","","",&num_entries,  
+      /* Now get the user's passphrase for their key */
+      if( !(passPtr = getpass("Enter passphrase for registry: ")) ){
+	printf("Failed to get registry passphrase from command line\n");
+	return 1;
+      }
+      printf("\n");
+      strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+
+      if( !(passPtr = getpass("Enter your username: ")) ){
+	printf("Failed to get username from command line\n");
+	return 1;
+      }
+      printf("\n");
+      strncpy(sec.userDN, passPtr, REG_MAX_STRING_LENGTH);
+
+      if(Get_registry_entries_secure(registryEPR, &sec, &num_entries,  
 				     &entries) != REG_SUCCESS){
 	printf("Get_registry_entries_secure failed\n");
 	return 1;

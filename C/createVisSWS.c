@@ -47,6 +47,8 @@ int main(int argc, char **argv){
   job.checkpointAddress[0] = '\0';
   job.passphrase[0] = '\0';
 
+  Wipe_security_info(&sec);
+
   if(argc != 6){
     printf("Usage:\n  createVisSWS <address of registry> "
 	   "<runtime (min)> <application> <purpose> <passphrase>\n");
