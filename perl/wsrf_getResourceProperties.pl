@@ -1,11 +1,13 @@
 #! /usr/bin/env perl
 
 BEGIN {
-       @INC = ( @INC, "/home/zzcguap/projects/WSRF-Lite" );
+       @INC = ( @INC, $ENV{'WSRF_LOCATION'} );
 };
 
 use WSRF::Lite +trace =>  debug => sub {};
 #use WSRF::Lite;
+use ReG_Utils;
+use strict;
 
 #need to point to users certificates - these are only used
 #if https protocal is being used.
@@ -25,18 +27,38 @@ if ( @ARGV != 2 )
 
 
 #get the location of the service
-$target = shift @ARGV;
+my $target = shift @ARGV;
 
 #get the property name to retrieve
-$param = shift  @ARGV;
+my $param = shift  @ARGV;
 
-$ans=  WSRF::Lite
-       -> uri($WSRF::Constants::WSRP)
-       -> wsaddress(WSRF::WS_Address->new()->Address($target))
-       -> GetResourceProperty( SOAP::Data->value($param)->type('xml') );             #function + args to72715254105314401250.log invoke
+my $arg = "<ResourceProperty>".$param."</ResourceProperty>";
+my $ans;
+if( index($target, "https://") == -1){
+    # Create WSSE header...
+    print "Enter the passphrase for the registry: ";
+    my $passphrase = <STDIN>;
+    chomp($passphrase);
+    print "\n";
 
+    my $DN = ReG_Utils::getUsername();
+    my $hdr = ReG_Utils::makeWSSEHeader($DN, $passphrase);
+
+    $ans =  WSRF::Lite
+        -> uri($WSRF::Constants::WSRP)
+        -> wsaddress(WSRF::WS_Address->new()->Address($target))
+        -> GetMultipleResourceProperties(SOAP::Header->name('wsse:Security')->value(\$hdr),
+					 SOAP::Data->value($arg)->type('xml') );
+}
+else{
+    $ans=  WSRF::Lite
+	-> uri($WSRF::Constants::WSRP)
+	-> wsaddress(WSRF::WS_Address->new()->Address($target))
+#       -> GetResourceProperty( SOAP::Data->value($param)->type('xml') );
+	-> GetMultipleResourceProperties( SOAP::Data->value($arg)->type('xml') );
+}
        
-if ($ans->fault) {  die "CREATE ERROR:: ".$ans->faultcode." ".$ans->faultstring."\n"; }
+die "GetMultipleResourceProperties ERROR:: ".$ans->faultcode." ".$ans->faultstring."\n" if ($ans->fault);
 
 my $prop_name = $param;
 $prop_name =~ s/\w*://;
@@ -49,6 +71,5 @@ if(defined($ans->valueof("//$prop_name"))) {
 else {
   print "   No \"$prop_name\" returned\n";
 }
-
 
 print "\n";
