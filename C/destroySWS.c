@@ -9,6 +9,8 @@
 int main(int argc, char **argv){
 
   int i;
+  struct reg_security_info sec;
+  Wipe_security_info(&sec);
 
   if(argc < 3 || ((argc-1)%2 != 0) ){
     printf("Usage:\n  destroySWS <EPR of SWS 1> <passphrase of SWS 1> "
@@ -20,8 +22,12 @@ int main(int argc, char **argv){
   }
   printf("\n");
 
+  strncpy(sec.userDN, getenv("USER"), REG_MAX_STRING_LENGTH);
+
   for(i=1; i<argc; i+=2){
-    if(Destroy_WSRP(argv[i], getenv("USER"), argv[i+1]) == REG_SUCCESS){
+
+    strncpy(sec.passphrase, argv[i+1], REG_MAX_STRING_LENGTH);
+    if(Destroy_WSRP(argv[i], &sec) == REG_SUCCESS){
       printf("Destroyed %s\n", argv[i]);
     }
   }

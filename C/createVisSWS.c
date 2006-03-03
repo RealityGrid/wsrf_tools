@@ -25,9 +25,8 @@ int main(int argc, char **argv){
   char *ioTypes;
   char *passPtr;
   char  confFile[REG_MAX_STRING_LENGTH];
-  char  keyPassphrase[REG_MAX_STRING_LENGTH];
   struct soap mySoap;
-  struct wsrp__SetResourcePropertiesResponse response;
+  /*struct wsrp__SetResourcePropertiesResponse response;*/
   struct msg_struct *msg;
   xmlDocPtr doc;
   xmlNsPtr   ns;
@@ -61,7 +60,6 @@ int main(int argc, char **argv){
   strncpy(job.purpose, argv[4], REG_MAX_STRING_LENGTH);
   strncpy(job.passphrase, argv[5], REG_MAX_STRING_LENGTH);
   snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
-  memset(keyPassphrase, '\0', REG_MAX_STRING_LENGTH);
   if(strstr(registryAddr, "https") == registryAddr){
 
     snprintf(confFile, REG_MAX_STRING_LENGTH, 
@@ -80,16 +78,14 @@ int main(int argc, char **argv){
       printf("Failed to get key passphrase from command line\n");
       return 1;
     }
-    snprintf(keyPassphrase, REG_MAX_STRING_LENGTH, "%s", passPtr);
+    strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
   }
   printf("\n");
 
   /* Get the list of available Containers and ask the user to 
      choose one */
   if(Get_registry_entries_filtered_secure(registryAddr, 
-					  keyPassphrase,
-					  sec.myKeyCertFile, 
-					  sec.caCertsPath,  
+					  &sec,
 					  &num_entries,  
 					  &entries, 
 					  "Container registry") != REG_SUCCESS){
@@ -107,9 +103,7 @@ int main(int argc, char **argv){
   strcpy(containerAddr, entries[0].gsh);
   free(entries);
   if(Get_registry_entries_filtered_secure(containerAddr,
- 					  keyPassphrase,
-					  sec.myKeyCertFile, 
-					  sec.caCertsPath,  
+ 					  &sec,
 					  &num_entries,  
 					  &entries, "Container") != REG_SUCCESS){
     fprintf(stderr, "Search for available containers failed\n");
@@ -139,9 +133,7 @@ int main(int argc, char **argv){
   /* Look for available SWSs and get user to choose which one to
      use as a data source */
   if(Get_registry_entries_filtered_secure(registryAddr,
-					  keyPassphrase,
-					  sec.myKeyCertFile, 
-					  sec.caCertsPath,  
+					  &sec,  
 					  &num_entries,  
 					  &entries,
 					  "SWS") != REG_SUCCESS){
@@ -176,13 +168,14 @@ int main(int argc, char **argv){
     printf("Failed to get password from command line\n");
     return 1;
   }
+  strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
 
   /* Obtain the IOTypes from the data source */
   soap_init(&mySoap);
   if( Get_resource_property (&mySoap,
 			     dataSource,
-			     job.userName,
-			     passPtr,
+			     sec.userDN,
+			     sec.passphrase,
 			     "ioTypeDefinitions",
 			     &ioTypes) != REG_SUCCESS ){
 
@@ -248,10 +241,7 @@ int main(int argc, char **argv){
 
   /* Now create SWS for the vis */
   if( !(EPR = Create_steering_service(&job, containerAddr, 
-				      registryAddr,
-				      keyPassphrase, 
-				      sec.myKeyCertFile,
-				      sec.caCertsPath)) ){
+				      registryAddr, &sec)) ){
     printf("FAILED to create SWS for %s :-(\n", job.software);
     return 1;
   }
@@ -264,16 +254,17 @@ int main(int argc, char **argv){
 	   "<sourceLabel>%s</sourceLabel></dataSource>",
 	   dataSource, iodef_label);
 
-  if(job.passphrase[0]){
-    Create_WSSE_header(&mySoap, job.userName, job.passphrase);
-  }
+  Create_WSSE_header(&mySoap, EPR, sec.userDN, sec.passphrase);
 
-  if(soap_call_wsrp__SetResourceProperties(&mySoap, EPR, 
-					   "", buf, &response) != SOAP_OK){
-    soap_print_fault(&mySoap, stderr);
+  if(Set_resource_property(&mySoap, EPR,
+			   sec.userDN, sec.passphrase,
+			   buf) != REG_SUCCESS){
+    /*  if(soap_call_wsrp__SetResourceProperties(&mySoap, EPR, 
+	"", buf, &response) != SOAP_OK){
+    soap_print_fault(&mySoap, stderr);*/
     fprintf(stderr, "Failed to initialize SWS with info. on data source :-(");
 
-    if(Destroy_WSRP(EPR, job.userName, job.passphrase) == REG_SUCCESS){
+    if(Destroy_WSRP(EPR, &sec) == REG_SUCCESS){
       fprintf(stderr, "  => Destroyed %s\n", EPR);
     }
     else{

@@ -28,11 +28,11 @@ int main(int argc, char **argv){
   strncpy(username, argv[3], 256);
 
   soap_init(&mySoap);
-
+/*
   if(passphrase[0]){
     Create_WSSE_header(&mySoap, getenv("USER"), passphrase);
   }
-
+*/
   snprintf(msg, 1024, "<user>%s</user>", username);
 
   /* If address of SWS begins with 'https' then initialize SSL context */
@@ -45,6 +45,10 @@ int main(int argc, char **argv){
 			 "/etc/grid-security/certificates");
   }
 
+  Set_resource_property(&mySoap, EPR, getenv("USER"), 
+                        passphrase, msg);
+
+/*
   if(soap_call_wsrp__SetResourceProperties(&mySoap, EPR, 
 					   "", msg, &response) != SOAP_OK){
     soap_print_fault(&mySoap, stderr);
@@ -54,7 +58,7 @@ int main(int argc, char **argv){
   else{
     fprintf(stderr, "Added user >>%s<< to SWS :-)\n\n", username);
   }
-
+*/
   soap_end(&mySoap);
   soap_done(&mySoap);
 
