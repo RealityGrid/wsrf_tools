@@ -139,11 +139,8 @@ int main(int argc, char **argv){
   strcpy(containerAddr, entries[input].gsh);
   free(entries);
 
-  /* Set security struct up for SWS rather than registry */
-  strncpy(sec.passphrase, job.passphrase, REG_MAX_STRING_LENGTH);
-
   EPR = Create_steering_service(&job, containerAddr,
-				 registryAddr, &sec);
+				registryAddr, &sec);
   if(EPR){
     printf("\nAddress of SWS = %s\n", EPR);
   }

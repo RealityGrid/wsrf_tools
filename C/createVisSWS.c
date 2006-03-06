@@ -25,8 +25,7 @@ int main(int argc, char **argv){
   char *ioTypes;
   char *passPtr;
   char  confFile[REG_MAX_STRING_LENGTH];
-  struct soap mySoap;
-  /*struct wsrp__SetResourcePropertiesResponse response;*/
+  struct soap        mySoap;
   struct msg_struct *msg;
   xmlDocPtr doc;
   xmlNsPtr   ns;
@@ -38,14 +37,6 @@ int main(int argc, char **argv){
   struct reg_job_details     job;
   struct reg_security_info   sec;
 
-  job.userName[0] = '\0';
-  sprintf(job.group, "RSS");
-  job.software[0] = '\0';
-  job.purpose[0] = '\0';
-  job.inputFilename[0] = '\0';
-  job.checkpointAddress[0] = '\0';
-  job.passphrase[0] = '\0';
-
   Wipe_security_info(&sec);
 
   if(argc != 6){
@@ -54,6 +45,9 @@ int main(int argc, char **argv){
     return 1;
   }
 
+  job.inputFilename[0] = '\0';
+  job.checkpointAddress[0] = '\0';
+  sprintf(job.group, "RSS");
   strncpy(registryAddr, argv[1], REG_MAX_STRING_LENGTH);
   sscanf(argv[2], "%d", &(job.lifetimeMinutes));
   strncpy(job.software, argv[3], REG_MAX_STRING_LENGTH);
@@ -76,6 +70,21 @@ int main(int argc, char **argv){
     if( !(passPtr = getpass("Enter passphrase for key: ")) ){
 
       printf("Failed to get key passphrase from command line\n");
+      return 1;
+    }
+    strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+  }
+  else{
+    sec.use_ssl = 0;
+    if( !(passPtr = getpass("Enter your username for registry: ")) ){
+      printf("Failed to get username from command line\n");
+      return 1;
+    }
+    printf("\n");
+    strncpy(sec.userDN, passPtr, REG_MAX_STRING_LENGTH);    
+    
+    if( !(passPtr = getpass("Enter passphrase for registry: ")) ){
+      printf("Failed to get registry passphrase from command line\n");
       return 1;
     }
     strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
@@ -168,7 +177,7 @@ int main(int argc, char **argv){
     printf("Failed to get password from command line\n");
     return 1;
   }
-  strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+  strncpy(job.passphrase, passPtr, REG_MAX_STRING_LENGTH);
 
   /* Obtain the IOTypes from the data source */
   soap_init(&mySoap);
@@ -236,7 +245,6 @@ int main(int argc, char **argv){
     }
     ioPtr = ioPtr->next;
   }
-
   Delete_msg_struct(&msg);
 
   /* Now create SWS for the vis */
@@ -245,7 +253,6 @@ int main(int argc, char **argv){
     printf("FAILED to create SWS for %s :-(\n", job.software);
     return 1;
   }
-
   fprintf(stdout, "\nAddress of SWS = %s\n", EPR);
 
   /* Finally, set it up with information on the data source*/
@@ -254,21 +261,16 @@ int main(int argc, char **argv){
 	   "<sourceLabel>%s</sourceLabel></dataSource>",
 	   dataSource, iodef_label);
 
-  Create_WSSE_header(&mySoap, EPR, sec.userDN, sec.passphrase);
-
   if(Set_resource_property(&mySoap, EPR,
-			   sec.userDN, sec.passphrase,
+			   job.userName, job.passphrase,
 			   buf) != REG_SUCCESS){
-    /*  if(soap_call_wsrp__SetResourceProperties(&mySoap, EPR, 
-	"", buf, &response) != SOAP_OK){
-    soap_print_fault(&mySoap, stderr);*/
     fprintf(stderr, "Failed to initialize SWS with info. on data source :-(");
 
     if(Destroy_WSRP(EPR, &sec) == REG_SUCCESS){
       fprintf(stderr, "  => Destroyed %s\n", EPR);
     }
     else{
-      fprintf(stderr, "Also failed to clean-up the SWS %s\n", EPR);
+      fprintf(stderr, "    Also failed to clean-up the SWS %s\n", EPR);
     }
     soap_end(&mySoap);
     soap_done(&mySoap);
