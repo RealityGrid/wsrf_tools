@@ -19,6 +19,7 @@ int main(int argc, char **argv){
 
   char   registryEPR[128];
   char   securityConfigFile[REG_MAX_STRING_LENGTH];
+  char   filterString[128];
   char  *passPtr;
   int    i;
   int    num_entries;
@@ -33,71 +34,71 @@ int main(int argc, char **argv){
   }
   strncpy(registryEPR, argv[1], 128);
   Wipe_security_info(&sec);
+  memset(filterString, '\0', 128);
 
-  if(argc != 3){
+  if(argc==3){
+    strncpy(filterString, argv[2], 128);
+  }
 
-    if(strstr(registryEPR, "https") == registryEPR){
-
-      /* Read the location of certs etc. into global variables */
-      if( !(passPtr = getenv("HOME")) ){
-	fprintf(stderr, "Failed to get $HOME environment variable\n");
-	return 1;
-      }
-      snprintf(securityConfigFile, REG_MAX_STRING_LENGTH,
-	       "%s/RealityGrid/etc/security.conf", passPtr);
-
-      if(Get_security_config(securityConfigFile, &sec)){
-	printf("Failed to get security configuration\n");
-	return 1;
-      }
-
-      /* Now get the user's passphrase for their key */
-      if( !(passPtr = getpass("Enter passphrase for key: ")) ){
-
-	printf("Failed to get key passphrase from command line\n");
-	return 1;
-      }
-      printf("\n");
-      strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
-
-      /* Finally, we can contact the registry */
-      if(Get_registry_entries_secure(registryEPR,
-				     &sec, 
-				     &num_entries,  
-				     &entries) != REG_SUCCESS){
-	printf("Get_registry_entries_secure failed\n");
-	return 1;
-      }
+  if(strstr(registryEPR, "https") == registryEPR){
+    
+    /* Read the location of certs etc. into global variables */
+    if( !(passPtr = getenv("HOME")) ){
+      fprintf(stderr, "Failed to get $HOME environment variable\n");
+      return 1;
     }
-    else{
-      /* Now get the user's passphrase for their key */
-      if( !(passPtr = getpass("Enter passphrase for registry: ")) ){
-	printf("Failed to get registry passphrase from command line\n");
-	return 1;
-      }
-      printf("\n");
-      strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+    snprintf(securityConfigFile, REG_MAX_STRING_LENGTH,
+	     "%s/RealityGrid/etc/security.conf", passPtr);
 
-      if( !(passPtr = getpass("Enter your username: ")) ){
-	printf("Failed to get username from command line\n");
-	return 1;
-      }
-      printf("\n");
-      strncpy(sec.userDN, passPtr, REG_MAX_STRING_LENGTH);
+    if(Get_security_config(securityConfigFile, &sec)){
+      printf("Failed to get security configuration\n");
+      return 1;
+    }
 
-      if(Get_registry_entries_secure(registryEPR, &sec, &num_entries,  
-				     &entries) != REG_SUCCESS){
-	printf("Get_registry_entries_secure failed\n");
-	return 1;
+    /* Now get the user's passphrase for their key */
+    if( !(passPtr = getpass("Enter passphrase for key: ")) ){
+
+      printf("Failed to get key passphrase from command line\n");
+      return 1;
+    }
+    printf("\n");
+    strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+
+  }
+  else{
+    /* No SSL - get the passphrase for the registry */
+    if( !(passPtr = getpass("Enter passphrase for registry: ")) ){
+      printf("Failed to get registry passphrase from command line\n");
+      return 1;
       }
+    printf("\n");
+    strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+
+    if( !(passPtr = getpass("Enter your username: ")) ){
+      printf("Failed to get username from command line\n");
+      return 1;
+    }
+    printf("\n");
+    strncpy(sec.userDN, passPtr, REG_MAX_STRING_LENGTH);
+    
+  }
+
+  /* Finally, we can contact the registry */
+  if(filterString[0]){
+    if(Get_registry_entries_filtered_secure(registryEPR, &sec,
+					    &num_entries,  
+					    &entries,
+					    filterString) != REG_SUCCESS){
+      printf("Get_registry_entries_filtered_secure failed\n");
+      return 1;
     }
   }
   else{
-
-    if(Get_registry_entries_filtered(registryEPR, &num_entries,  
-				     &entries,
-				     argv[2]) != REG_SUCCESS){
-      printf("Get_registry_entries_filtered failed\n");
+    if(Get_registry_entries_secure(registryEPR,
+				   &sec, 
+				   &num_entries,  
+				   &entries) != REG_SUCCESS){
+      printf("Get_registry_entries_secure failed\n");
       return 1;
     }
   }
