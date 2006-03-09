@@ -23,6 +23,7 @@ int main(int argc, char **argv){
   printf("\n");
 
   strncpy(sec.userDN, getenv("USER"), REG_MAX_STRING_LENGTH);
+  sec.use_ssl = 0;
 
   for(i=1; i<argc; i+=2){
 
