@@ -10,7 +10,7 @@
 # resource
 
 BEGIN {
-       @INC = ( @INC, "/home/zzcguap/projects/WSRF-Lite" );
+       @INC = ( @INC, $ENV{'WSRF_LOCATION'} );
 };
 
 foreach my $item ( @INC )

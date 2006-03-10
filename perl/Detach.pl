@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 
 BEGIN {
-       @INC = ( @INC, "/home/zzcguap/projects/WSRF-Lite" );
+       @INC = ( @INC, $ENV{'WSRF_LOCATION'} );
 };
 
 #use WSRF::Lite +trace =>  debug => sub {};

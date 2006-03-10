@@ -4,7 +4,7 @@
 use strict;
 
 BEGIN {
-       @INC = ( @INC, "/home/zzcguap/projects/WSRF-Lite" );
+       @INC = ( @INC, $ENV{'WSRF_LOCATION'} );
 };
 
 #
