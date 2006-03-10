@@ -1,13 +1,14 @@
 #! /usr/bin/env perl
 
 BEGIN {
-       @INC = ( @INC, "/home/zzcguap/projects/WSRF-Lite" );
+       @INC = ( @INC, $ENV{'WSRF_LOCATION'} );
 };
 
 #use WSRF::Lite +trace =>  debug => sub {};
 use WSRF::Lite;
 use MIME::Base64;
 use Digest::SHA1 qw(sha1 sha1_hex sha1_base64);;
+use ReG_Utils;
 use strict;
 
 #need to point to users certificates - these are only used
