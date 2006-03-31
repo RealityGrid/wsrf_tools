@@ -31,8 +31,17 @@ sub deleteNodeEntry {
 #----------------------------------------------------------------
 
 if(@ARGV != 1){
-    print "Useage: pruneChkTree.pl <ID of starting node>\n";
+    print "\nUseage: pruneChkTree.pl <ID or GSH of starting node>\n\n";
+    print "e.g. pruneChkTree.pl \"http://a.machine.addr:10560/Session".
+	"/RealityGridTree/service?/52595\"\n";
+    print "or; pruneChkTree.pl /52595\n\n";
     exit;
+}
+
+my $GSH = $ARGV[0];
+if(index($GSH, "service\?") > -1){
+    my @bits = split(/service\?/, $GSH);
+    $GSH = $bits[1];
 }
 
 my $datasource="dbi:mysql:database=RealityGridTree;host=vermont.mvc.mcc.ac.uk";
@@ -43,7 +52,6 @@ my $dbh = DBI->connect($datasource, $username, $auth)
                          or die $DBI::errstr;
 
 my $ans = "";
-my $GSH = $ARGV[0];
 my $count = 0;
 my $sth;
 
@@ -70,7 +78,7 @@ while(1){
 	$sth->execute( $Registered_GSH );
     }
     if (@{nodeGSHs} == 0){
-	print "No nodes found...DONE?\n";
+	print "No children left...\n";
 	last;
     }
 
@@ -93,7 +101,8 @@ deleteNodeEntry($dbh, $GSH, $sge);
 # If the root node is actually the root of a checkpoint tree then
 # we must remove it from the ActiveTrees ServiceGroup too...
 if($sg_gsh eq "ActiveTrees"){
-    print "Selected root node is the root of the tree\n";
+    print "Selected root node is the root of a tree - deleting ".
+	"from ActiveTrees...\n";
     $sth = $dbh->prepare("DELETE FROM ActiveTrees WHERE SGE_GSH = ?");
     $sth->execute( $sge );
 }
