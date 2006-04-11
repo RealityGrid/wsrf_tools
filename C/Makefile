@@ -16,7 +16,8 @@ LIB_FLAGS = securityUtils.o  ${STEER_LIBS} -lReG_Steer_Utils \
 ${INCLUDE_PATH} -c $< -o $@
 
 TARGETS = addUser browseRegistry createSWS createVisSWS destroySWS \
-          globalParamCreate getResourcePropertyDoc getResourceProperty
+          globalParamCreate getResourcePropertyDoc getResourceProperty \
+          testSteerLib
 
 all: ${TARGETS} 
 
@@ -44,10 +45,13 @@ getResourcePropertyDoc: getResourcePropertyDoc.o
 getResourceProperty: getResourceProperty.o
 	${CC} ${C_FLAGS} getResourceProperty.o ${LIB_FLAGS} -o $@
 
+testSteerLib: testSteerLib.o
+	${CC} ${C_FLAGS} testSteerLib.o ${LIB_FLAGS} -o $@
+
 clean:
 	rm -f browseRegistry createSWS createVisSWS 
 	rm -f destroySWS globalParamCreate getResourcePropertyDoc
-	rm -f addUser getResourceProperty
+	rm -f addUser getResourceProperty testSteerLib
 	rm -f *.o
 	rm -f *~
 

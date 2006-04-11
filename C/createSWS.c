@@ -16,8 +16,7 @@ void sigpipe_handle(int x) { }
 int main(int argc, char **argv){
 
   int    i, input;
-  int    num_entries;
-  struct registry_entry *entries;
+  struct registry_contents content;
   char  confFile[REG_MAX_STRING_LENGTH];
   char  containerAddr[REG_MAX_STRING_LENGTH];
   char  registryAddr[REG_MAX_STRING_LENGTH];
@@ -96,48 +95,48 @@ int main(int argc, char **argv){
 
   if(Get_registry_entries_filtered_secure(registryAddr,
 					  &sec,
-					  &num_entries,  &entries,
+					  &content,
 					  "Container registry") != REG_SUCCESS){
     printf("Search for registry of available containers failed\n");
     return 1;
   }
 
-  if(num_entries != 1){
+  if(content.numEntries != 1){
     printf("Search for registry of available containers failed: "
-	   "returned %d entries\n", num_entries);
+	   "returned %d entries\n", content.numEntries);
     return 1;
   }
 
-  strncpy(containerAddr, entries[0].gsh, REG_MAX_STRING_LENGTH);
-  free(entries);
+  strncpy(containerAddr, content.entries[0].gsh, REG_MAX_STRING_LENGTH);
+  Delete_registry_table(&content);
+
   if(Get_registry_entries_filtered_secure(containerAddr,
 					  &sec, 
-					  &num_entries,  
-					  &entries,
+					  &content,
 					  "Container") != REG_SUCCESS){
     printf("Search for available containers failed\n");
     return 1;
   }
 
-  if(num_entries == 0){
+  if(content.numEntries == 0){
     printf("No containers available :-(\n");
     return 1;
   }
 
   printf("Available containers:\n");
-  for(i=0; i<num_entries; i++){
-    if( !strcmp(entries[i].service_type, "Container") ){
-      printf("  %d: EPR: %s\n", i, entries[i].gsh);
+  for(i=0; i<content.numEntries; i++){
+    if( !strcmp(content.entries[i].service_type, "Container") ){
+      printf("  %d: EPR: %s\n", i, content.entries[i].gsh);
     }
   }
-  printf("Enter container to use [0-%d]: ",num_entries-1);
+  printf("Enter container to use [0-%d]: ",content.numEntries-1);
   while(1){
     if((scanf("%d", &input) == 1) && 
-       (input > -1 && input < num_entries))break;
+       (input > -1 && input < content.numEntries))break;
     printf("\nInvalid choice, please select container: ");
   }
-  strcpy(containerAddr, entries[input].gsh);
-  free(entries);
+  strcpy(containerAddr, content.entries[input].gsh);
+  Delete_registry_table(&content);
 
   EPR = Create_steering_service(&job, containerAddr,
 				registryAddr, &sec);

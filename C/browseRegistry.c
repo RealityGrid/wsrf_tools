@@ -22,9 +22,8 @@ int main(int argc, char **argv){
   char   filterString[128];
   char  *passPtr;
   int    i;
-  int    num_entries;
-  struct registry_entry *entries;
-  struct reg_security_info   sec;
+  struct registry_contents content;
+  struct reg_security_info sec;
 
   printf("\n");
   if(argc < 2 || argc > 3){
@@ -86,8 +85,7 @@ int main(int argc, char **argv){
   /* Finally, we can contact the registry */
   if(filterString[0]){
     if(Get_registry_entries_filtered_secure(registryEPR, &sec,
-					    &num_entries,  
-					    &entries,
+					    &content,
 					    filterString) != REG_SUCCESS){
       printf("Get_registry_entries_filtered_secure failed\n");
       return 1;
@@ -96,22 +94,23 @@ int main(int argc, char **argv){
   else{
     if(Get_registry_entries_secure(registryEPR,
 				   &sec, 
-				   &num_entries,  
-				   &entries) != REG_SUCCESS){
+				   &content) != REG_SUCCESS){
       printf("Get_registry_entries_secure failed\n");
       return 1;
     }
   }
 
-  for(i=0; i<num_entries; i++){
-    printf("Entry %d - type: %s\n", i, entries[i].service_type);
-    printf("           EPR: %s\n", entries[i].gsh);
-    printf("     Entry EPR: %s\n", entries[i].entry_gsh);
-    printf("           App: %s\n", entries[i].application);
-    printf("  User & group: %s, %s\n", entries[i].user, entries[i].group);
-    printf("    Start time: %s\n", entries[i].start_date_time);
-    printf("   Description: %s\n\n", entries[i].job_description);
+  for(i=0; i<content.numEntries; i++){
+    printf("Entry %d - type: %s\n", i, content.entries[i].service_type);
+    printf("           EPR: %s\n", content.entries[i].gsh);
+    printf("     Entry EPR: %s\n", content.entries[i].entry_gsh);
+    printf("           App: %s\n", content.entries[i].application);
+    printf("  User & group: %s, %s\n", 
+	   content.entries[i].user, content.entries[i].group);
+    printf("    Start time: %s\n", content.entries[i].start_date_time);
+    printf("   Description: %s\n\n", content.entries[i].job_description);
   }
-  free(entries);
+  Delete_registry_table(&content);
+
   return 0;
 }

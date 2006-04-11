@@ -30,12 +30,11 @@ int main(int argc, char **argv){
   xmlDocPtr doc;
   xmlNsPtr   ns;
   xmlNodePtr cur;
-  struct io_struct      *ioPtr;
-  int                    i, count;
-  int                    num_entries;
-  struct registry_entry *entries;
-  struct reg_job_details     job;
-  struct reg_security_info   sec;
+  struct io_struct        *ioPtr;
+  int                      i, count;
+  struct registry_contents content;
+  struct reg_job_details   job;
+  struct reg_security_info sec;
 
   Wipe_security_info(&sec);
 
@@ -95,80 +94,79 @@ int main(int argc, char **argv){
      choose one */
   if(Get_registry_entries_filtered_secure(registryAddr, 
 					  &sec,
-					  &num_entries,  
-					  &entries, 
+					  &content, 
 					  "Container registry") != REG_SUCCESS){
     fprintf(stderr, 
 	    "Search for registry of available containers failed\n");
     return 1;
   }
 
-  if(num_entries != 1){
+  if(content.numEntries != 1){
     fprintf(stderr, "Search for registry of available containers failed: "
-	    "returned %d entries\n", num_entries);
+	    "returned %d entries\n", content.numEntries);
     return 1;
   }
 
-  strcpy(containerAddr, entries[0].gsh);
-  free(entries);
+  strcpy(containerAddr, content.entries[0].gsh);
+  Delete_registry_table(&content);
+
   if(Get_registry_entries_filtered_secure(containerAddr,
  					  &sec,
-					  &num_entries,  
-					  &entries, "Container") != REG_SUCCESS){
+					  &content, "Container") != REG_SUCCESS){
     fprintf(stderr, "Search for available containers failed\n");
     return 1;
   }
 
-  if(num_entries == 0){
+  if(content.numEntries == 0){
     fprintf(stderr, "No containers available :-(\n");
     return 1;
   }
 
   fprintf(stdout, "Available containers:\n");
-  for(i=0; i<num_entries; i++){
-    if( !strcmp(entries[i].service_type, "Container") ){
-      fprintf(stdout, "  %d: EPR: %s\n", i, entries[i].gsh);
+  for(i=0; i<content.numEntries; i++){
+    if( !strcmp(content.entries[i].service_type, "Container") ){
+      fprintf(stdout, "  %d: EPR: %s\n", i, content.entries[i].gsh);
     }
   }
-  printf("\nEnter container to use [0-%d]: ",num_entries-1);
+  printf("\nEnter container to use [0-%d]: ",content.numEntries-1);
   while(1){
     if((scanf("%d", &count) == 1) && 
-       (count > -1 && count < num_entries))break;
+       (count > -1 && count < content.numEntries))break;
     fprintf(stderr, "\nInvalid choice, please select container: ");
   }
-  strcpy(containerAddr, entries[count].gsh);
-  free(entries);
+  strcpy(containerAddr, content.entries[count].gsh);
+  Delete_registry_table(&content);
 
   /* Look for available SWSs and get user to choose which one to
      use as a data source */
   if(Get_registry_entries_filtered_secure(registryAddr,
 					  &sec,  
-					  &num_entries,  
-					  &entries,
+					  &content,
 					  "SWS") != REG_SUCCESS){
     fprintf(stderr, "\nNo jobs to use as data source found in registry!\n");
     return 1;
   }
   printf("\nAvailable jobs:\n");
-  for(i=0; i<num_entries; i++){
-    if( !strcmp(entries[i].service_type, "SWS") ){
-      printf("  %d:      EPR: %s\n", i, entries[i].gsh);
-      printf("           App: %s\n", entries[i].application);
-      printf("  User & group: %s, %s\n", entries[i].user, entries[i].group);
-      printf("    Start time: %s\n", entries[i].start_date_time);
-      printf("   Description: %s\n\n", entries[i].job_description);
+  for(i=0; i<content.numEntries; i++){
+    if( !strcmp(content.entries[i].service_type, "SWS") ){
+      printf("  %d:      EPR: %s\n", i, content.entries[i].gsh);
+      printf("           App: %s\n", content.entries[i].application);
+      printf("  User & group: %s, %s\n", 
+	     content.entries[i].user, content.entries[i].group);
+      printf("    Start time: %s\n", content.entries[i].start_date_time);
+      printf("   Description: %s\n\n", content.entries[i].job_description);
     }
   }
   fprintf(stdout, "Select job to use as data source [0-%d]: ",
-	  num_entries-1);
+	  content.numEntries-1);
   while(1){
     if((scanf("%d", &count) == 1) && 
-       (count > -1 && count < num_entries))break;
+       (count > -1 && count < content.numEntries))break;
     fprintf(stderr, "\nInvalid choice, please select job [0-%d]: ", 
-	    num_entries-1);
+	    content.numEntries-1);
   }
-  strncpy(dataSource, entries[count].gsh, 256);
-  free(entries);
+  strncpy(dataSource, content.entries[count].gsh, 256);
+  Delete_registry_table(&content);
 
   /* Ask the user to specify the (WSSE) password for access to 
      this SWS */
