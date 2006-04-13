@@ -1,59 +1,97 @@
-#! /usr/bin/env perl
-use strict;
+#!/usr/bin/env perl
 
 BEGIN{
-    @INC = (@INC, $ENV{'WSRF_LOCATION'});
+    @INC = (@INC, $ENV{WSRF_LOCATION});
 }
 
-# The Resource Identifier for the resource is returned in the
-# SOAP Headers - this Resource Identifier needs to be included
-# in the SOAP Headers for any other calls to use this
-# ServiceGroup
-
+use strict;
 use WSRF::Lite +trace =>  debug => sub {};
-#use WSRF::Lite;
+use SOAP::Lite;
 
-#need to point to users certificates - these are only used
-#if https protocal is being used.
-$ENV{HTTPS_CA_DIR} = "/etc/grid-security/certificates/";
-$ENV{HTTPS_CERT_FILE} = $ENV{HOME}."/.globus/usercert.pem";
-$ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
-
-if ( @ARGV != 5)
-{
-  print "Usage: addChkNode.pl URL <CP Data> <Steering log> ".
-      "<Input file> <Meta-data>\n";
-  print "   CP Data is \n";
-  print "   e.g.: addChkNode.pl \n";
-  exit;
+if(@ARGV != 1){
+    print "Useage:\n";
+    print "  ./addChkNode.pl <EPR of node to add to>\n";
 }
 
-#get the location/endpoint of the service
-my ($target, $cpData, $steerLog, $inputFile, $metaData) = @ARGV;
+my $gsh = $ARGV[0];
 
-#my $passphrase = "";
-#if($target =~ m/^https/){
-#    if (@ARGV != 1){
-#	print "A passphrase must be specified when creating a secured registry\n";
-#	exit;
-#    }
-#    $passphrase = shift @ARGV;
-#}
+my $chkMetaData = <<EOF;
+<Checkpoint_data application="mini_app v.1.0">
+<Chk_type>1002</Chk_type>
+<Chk_UID>1804289383</Chk_UID>
+<Files location="methuselah.mvc.mcc.ac.uk">
+  <file type="gsiftp-URL">gsiftp://methuselah.mvc.mcc.ac.uk/home/zzcguap/RealityGrid/scratch/./fake_chkpoint_1804289383.dat</file>
+</Files>
+</Checkpoint_data>
+EOF
 
-my $uri = "http://www.sve.man.ac.uk/CheckPointTreeNode";
+my $steeringCmds = <<EOF;
+<Steer_log>
+<Log_entry><Steer_log_entry><Param><Value>4</Value><Handle>12</Handle></Param></Steer_log_entry><Seq_num>12</Seq_num></Log_entry><Log_entry><Steer_log_entry><Param>
+<Value>0</Value><Handle>2</Handle></Param></Steer_log_entry>
+<Seq_num>13</Seq_num></Log_entry><Log_entry><Steer_log_entry>
+<Command><Cmd_param><Value>OUT</Value><Handle>(null)</Handle>
+</Cmd_param><Cmd_param><Value>1</Value><Handle>(null)</Handle>
+</Cmd_param><Cmd_id>1002</Cmd_id></Command></Steer_log_entry>
+<Seq_num>24</Seq_num></Log_entry></Steer_log>
+EOF
 
-my $ans=  WSRF::Lite
-    -> uri($uri)
-    -> wsaddress(WSRF::WS_Address->new()->Address($target))
-    -> addNode($cpData, $steerLog, $inputFile, $metaData);
+my $input_file = "";
+my $nodeMetaData = <<EOF;
+<Checkpoint_node_data>
+<Param>
+<Handle>-100</Handle>
+<Label>SEQUENCE_NUM</Label>
+<Value>24</Value>
+</Param>
+<Param>
+<Handle>-99</Handle>
+<Label>CPU_TIME_PER_STEP</Label>
+<Value>0.000</Value>
+</Param>
+<Param>
+<Handle>-98</Handle>
+<Label>TIMESTAMP</Label>
+<Value>Thu Apr 13 12:50:52 2006
+</Value>
+</Param>
+<Param>
+<Handle>-97</Handle>
+<Label>STEERING_INTERVAL</Label>
+<Value>1</Value>
+</Param>
+<Param>
+<Handle>0</Handle>
+<Label>WALL CLOCK PER STEP (S)</Label>
+<Value>4.0014238357543945312</Value>
+</Param>
+</Checkpoint_node_data>
+EOF
 
-if ($ans->fault) {  die "ERROR adding node: ".$ans->faultcode." ".
-			$ans->faultstring."\n"; }
+my $som = WSRF::Lite
+    -> uri("http://www.realitygrid.org/CheckPointTreeNode")
+    -> wsaddress( WSRF::WS_Address->new()->Address($gsh) )
+    -> addNode(SOAP::Data->value("$chkMetaData")->type('string'), 
+	       SOAP::Data->value("$steeringCmds")->type('string'), 
+	       SOAP::Data->value("$input_file")->type('string'), 
+	       SOAP::Data->value("$nodeMetaData")->type('string'));
+if ($som->fault) {  
+    print "RecordCheckpoint: ERROR: addNode call failed:\n";
+    print $som->faultcode." ".$som->faultstring.
+	" ".$som->faultdetail."\n"; 
+    WSRF::BaseFaults::die_with_Fault(Description => $som->faultcode.
+				     " ".$som->faultstring,
+				     ErrorCode => '103',
+				     FaultCause => $som->faultdetail);
+}
 
-#Check we that got a WS-Address EndPoint back
-my $address = $ans->valueof('//Body//Address') or 
-       die "CREATE ERROR:: No Endpoint returned\n";
-
-print "\n";
-print "           EndPoint of new node = $address\n";
-print "\n";
+# addNode returns a WSAddress object if successful
+if( $som->match("//{$WSRF::Constants::WSA}Address") ){
+    # Update the GSH of the checkpoint we are currently running from
+    $WSRF::WSRP::ResourceProperties{checkpointEPR} = 
+	$som->valueof("//{$WSRF::Constants::WSA}Address");
+    $WSRF::WSRP::ResourceProperties{lastModifiedTime} = time;
+}
+else{
+    print "No WS-Address returned\n";
+}
