@@ -24,11 +24,11 @@ int main(int argc, char **argv){
 
   signal(SIGPIPE, sigpipe_handle); 
 
-  if(argc != 3){
-    printf("Usage:\n  getResourcePropertyDoc <EPR of SWS> <username>\n");
+  if(argc != 2){
+    printf("Usage:\n  getResourcePropertyDoc <EPR of SWS>\n");
     return 1;
   }
-  strncpy(username, argv[2], MAX_LEN);
+  snprintf(username, MAX_LEN, "%s", getenv("USER"));
 
   soap_init(&mySoap);
 
