@@ -25,6 +25,17 @@ Type 'make'...
 --------------------------------------------------------------------
 The utilities:
 
+---------------------
+addUser
+
+  Usage:
+    addUser <address of SWS> <passphrase> <username to add>
+
+  Allow another user access to the specified SWS.  The passphrase
+  securing the SWS must be specified, along with the username of the
+  new user.
+
+---------------------
 browseRegistry
 
   Usage:
@@ -32,6 +43,7 @@ browseRegistry
 
   Browse a specified registry (WSRF ServiceGroup)...
 
+---------------------
 createSWS
 
   Usage:
@@ -40,14 +52,17 @@ createSWS
   Create a Steering Web Service.  This takes four mandatory arguments
   (address of the 'top level registry', run-time of the job in minutes,
   the name of the application being run and some [quoted] text
-  describing its purpose) and one optional argument (the EPR of the node in
-  a checkpoint tree from which the job is being restarted).
+  describing its purpose) and one optional argument - the EPR of the node in
+  a checkpoint tree from which the job is being restarted.
 
+---------------------
 createVisSWS
 
   As for createSWS but for use when the associated app. is a visualization
-  and thus must be supplied with a data source.
+  and thus must be supplied with a data source.  The simulation that will
+  act as a data source must be up and running before using this utility.
 
+---------------------
 destroySWS
 
   Usage:
@@ -55,6 +70,25 @@ destroySWS
 
   Destroys one or more specified SWSs.
 
+---------------------
+getResourceProperty
+
+  Usage:
+    getResourceProperty <EPR of SWS> <name of ResourceProperty>
+
+  Retrieves the value of the specified ResourceProperty from the SWS at the
+  specified address.
+
+---------------------
+getResourcePropertyDoc
+
+  Usage:
+    getResourcePropertyDoc <EPR of SWS>
+
+  Retrieves the complete ResourceProperties document from the SWS at the
+  specified address.
+
+---------------------
 globalParamCreate
 
   Usage: 
