@@ -24,7 +24,6 @@ int main(int argc, char **argv){
   char *EPR;
   char *ioTypes;
   char *passPtr;
-  char  confFile[REG_MAX_STRING_LENGTH];
   struct soap        mySoap;
   struct msg_struct *msg;
   xmlDocPtr doc;
@@ -55,11 +54,8 @@ int main(int argc, char **argv){
   snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
   if(strstr(registryAddr, "https") == registryAddr){
 
-    snprintf(confFile, REG_MAX_STRING_LENGTH, 
-	     "%s/RealityGrid/etc/security.conf", getenv("HOME"));
-
     /* Read the location of certs etc. into global variables */
-    if(Get_security_config(confFile, &sec)){
+    if(Get_security_config(NULL, &sec)){
       printf("Failed to get security configuration\n");
       return 1;
     }

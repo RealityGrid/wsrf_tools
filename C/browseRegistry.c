@@ -18,7 +18,6 @@ void sigpipe_handle(int x) { }
 int main(int argc, char **argv){
 
   char   registryEPR[128];
-  char   securityConfigFile[REG_MAX_STRING_LENGTH];
   char   filterString[128];
   char  *passPtr;
   int    i;
@@ -40,16 +39,8 @@ int main(int argc, char **argv){
   }
 
   if(strstr(registryEPR, "https") == registryEPR){
-    
-    /* Read the location of certs etc. into global variables */
-    if( !(passPtr = getenv("HOME")) ){
-      fprintf(stderr, "Failed to get $HOME environment variable\n");
-      return 1;
-    }
-    snprintf(securityConfigFile, REG_MAX_STRING_LENGTH,
-	     "%s/RealityGrid/etc/security.conf", passPtr);
 
-    if(Get_security_config(securityConfigFile, &sec)){
+    if(Get_security_config(NULL, &sec)){
       printf("Failed to get security configuration\n");
       return 1;
     }

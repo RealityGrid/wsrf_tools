@@ -17,7 +17,6 @@ int main(int argc, char **argv){
 
   int    i, input;
   struct registry_contents content;
-  char  confFile[REG_MAX_STRING_LENGTH];
   char  containerAddr[REG_MAX_STRING_LENGTH];
   char  registryAddr[REG_MAX_STRING_LENGTH];
   char *EPR;
@@ -57,11 +56,8 @@ int main(int argc, char **argv){
 
     sec.use_ssl = 1;
 
-    snprintf(confFile, REG_MAX_STRING_LENGTH, 
-	     "%s/RealityGrid/etc/security.conf", getenv("HOME"));
-
     /* Read the location of certs etc. into global variables */
-    if(Get_security_config(confFile, &sec) != REG_SUCCESS){
+    if(Get_security_config(NULL, &sec) != REG_SUCCESS){
       printf("Failed to get security configuration\n");
       return 1;
     }
