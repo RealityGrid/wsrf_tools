@@ -15,7 +15,8 @@ LIB_FLAGS = securityUtils.o  ${STEER_LIBS} -lReG_Steer_Utils \
 	${CC} ${C_FLAGS} -DREG_WITH_OPENSSL=${REG_WITH_OPENSSL_FLAG} \
 ${INCLUDE_PATH} -c $< -o $@
 
-TARGETS = addUser browseRegistry createSWS createVisSWS destroySWS \
+TARGETS = addUser browseRegistry createSWS createSWSProxy createVisSWS \
+          destroySWS \
           globalParamCreate getResourcePropertyDoc getResourceProperty \
           testSteerLib
 
@@ -26,6 +27,9 @@ addUser: addUser.o
 
 createSWS: createSWS.o securityUtils.o
 	${CC} ${C_FLAGS} createSWS.o ${LIB_FLAGS} -o $@
+
+createSWSProxy: createSWSProxy.o 
+	${CC} ${C_FLAGS} createSWSProxy.o ${LIB_FLAGS} -o $@
 
 createVisSWS: createVisSWS.o securityUtils.o
 	${CC} ${C_FLAGS} createVisSWS.o ${LIB_FLAGS} -o $@
@@ -45,8 +49,8 @@ getResourcePropertyDoc: getResourcePropertyDoc.o
 getResourceProperty: getResourceProperty.o
 	${CC} ${C_FLAGS} getResourceProperty.o ${LIB_FLAGS} -o $@
 
-testSteerLib: testSteerLib.o
-	${CC} ${C_FLAGS} testSteerLib.o ${LIB_FLAGS} -o $@
+#testSteerLib: testSteerLib.o
+#	${CC} ${C_FLAGS} testSteerLib.o ${LIB_FLAGS} -o $@
 
 clean:
 	rm -f browseRegistry createSWS createVisSWS 

@@ -3,6 +3,7 @@
 #include <string.h>
 #include "ReG_Steer_types.h"
 #include "ReG_Steer_Browser.h"
+#include "ReG_Steer_Steerside_WSRF.h"
 #include "ReG_Steer_Utils.h"
 #include <unistd.h>
 #include "signal.h"
@@ -19,10 +20,14 @@ int main(int argc, char **argv){
   struct registry_contents content;
   char  containerAddr[REG_MAX_STRING_LENGTH];
   char  registryAddr[REG_MAX_STRING_LENGTH];
+  char  buf[1024];
   char *EPR;
   char *pChar = NULL;
   struct reg_job_details   job;
   struct reg_security_info sec;
+  char *proxyAddress="yaffel.mvc.mcc.ac.uk";
+  int   proxyPort = 6969;
+  struct soap mySoap;
 
   job.userName[0] = '\0';
   snprintf(job.group, REG_MAX_STRING_LENGTH, "RSS");
@@ -145,14 +150,15 @@ int main(int argc, char **argv){
 
   /* Finally, set it up with information on the data proxy */
 
-  snprintf(buf, 1024, "<dataSource><sourceEPR>%s</sourceEPR>"
-	   "<sourceLabel>%s</sourceLabel></dataSource>",
-	   dataSource, iodef_label);
+  snprintf(buf, 1024, "<dataSource><Proxy><address>%s</address>"
+	   "<port>%d</port></Proxy></dataSource>",
+	   proxyAddress, proxyPort);
 
+  soap_init(&mySoap);
   if(Set_resource_property(&mySoap, EPR,
 			   job.userName, job.passphrase,
 			   buf) != REG_SUCCESS){
-    fprintf(stderr, "Failed to initialize SWS with info. on data source :-(");
+    fprintf(stderr, "Failed to initialize SWS with info. on data proxy :-(");
 
     if(Destroy_WSRP(EPR, &sec) == REG_SUCCESS){
       fprintf(stderr, "  => Destroyed %s\n", EPR);
@@ -164,6 +170,11 @@ int main(int argc, char **argv){
     soap_done(&mySoap);
     return 1;
   }
+  else{
+    printf("SWS initialized with address of proxy OK :-)\n\n");
+  }
 	 
+  soap_end(&mySoap);
+  soap_done(&mySoap);
   return 0;
 }
