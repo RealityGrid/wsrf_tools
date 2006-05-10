@@ -20,6 +20,7 @@ int main(int argc, char **argv){
   struct registry_contents content;
   char  containerAddr[REG_MAX_STRING_LENGTH];
   char  registryAddr[REG_MAX_STRING_LENGTH];
+  char  inputLabel[REG_MAX_STRING_LENGTH];
   char  buf[1024];
   char *EPR;
   char *pChar = NULL;
@@ -36,16 +37,50 @@ int main(int argc, char **argv){
   job.inputFilename[0] = '\0';
   job.checkpointAddress[0] = '\0';
   job.passphrase[0] = '\0';
+  inputLabel[0] = '\0';
 
   Wipe_security_info(&sec);
 
-  if( (argc != 6) && (argc != 7) ){
-    printf("Usage:\n  createSWS <address of registry>"
-	   " <lifetime (min)> <application> <purpose> <passphrase>"
-	   " [checkpoint EPR]\n");
+  if( (argc == 1) ){
+    printf("Usage:\n"
+	   "  createSWSProxy --registry=address_of_registry"
+	   " --lifetime=lifetime (min) --appName=name_of_application"
+	   " --purpose=purpose_of_job --passwd=passphrase_to_give_SWS"
+	   " --checkpoint=checkpoint_EPR --dataSource=label_of_data_source\n");
     return 1;
   }
 
+  for(i=0; i<argc; i++){
+    if(strstr(argv[i], "--registry=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(registryAddr, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--lifetime=")){
+      pChar = strchr(argv[i], '=');
+      sscanf(++pChar, "%d", &(job.lifetimeMinutes));
+    }
+    else if(strstr(argv[i], "--appName=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(job.software, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--purpose=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(job.purpose, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--passwd=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(job.passphrase, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--checkpoint=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(job.checkpointAddress, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--dataSource=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(inputLabel, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+  }
+  /*
   strncpy(registryAddr, argv[1], REG_MAX_STRING_LENGTH);
   sscanf(argv[2], "%d", &(job.lifetimeMinutes));
   strncpy(job.software, argv[3], REG_MAX_STRING_LENGTH);
@@ -56,6 +91,7 @@ int main(int argc, char **argv){
   if(argc == 7){
     strncpy(job.checkpointAddress, argv[6], REG_MAX_STRING_LENGTH);
   }
+  */
 
   if(strstr(registryAddr, "https") == registryAddr){
 
@@ -150,9 +186,17 @@ int main(int argc, char **argv){
 
   /* Finally, set it up with information on the data proxy */
 
-  snprintf(buf, 1024, "<dataSource><Proxy><address>%s</address>"
-	   "<port>%d</port></Proxy></dataSource>",
-	   proxyAddress, proxyPort);
+  i = snprintf(buf, 1024, "<dataSink><Proxy><address>%s</address>"
+	       "<port>%d</port></Proxy></dataSink>",
+	       proxyAddress, proxyPort);
+
+  if(inputLabel[0]){
+    snprintf(&(buf[i]), 1024, "<dataSource><Proxy><address>%s</address>"
+	     "<port>%d</port></Proxy><sourceLabel>%s</sourceLabel></dataSource>",
+	       proxyAddress, proxyPort, inputLabel);
+  }
+
+  printf("ARPDBG: sending >>%s<<\n", buf);
 
   soap_init(&mySoap);
   if(Set_resource_property(&mySoap, EPR,
