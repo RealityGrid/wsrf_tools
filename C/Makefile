@@ -16,9 +16,9 @@ LIB_FLAGS = securityUtils.o  ${STEER_LIBS} -lReG_Steer_Utils \
 ${INCLUDE_PATH} -c $< -o $@
 
 TARGETS = addUser browseRegistry createSWS createSWSProxy createVisSWS \
-          destroySWS \
-          globalParamCreate getResourcePropertyDoc getResourceProperty \
-          testSteerLib
+          destroySWS globalParamCreate getResourcePropertyDoc getResourceProperty
+
+#          testSteerLib
 
 all: ${TARGETS} 
 
