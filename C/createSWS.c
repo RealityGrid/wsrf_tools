@@ -53,39 +53,40 @@ int main(int argc, char **argv){
 
   for(i=0; i<argc; i++){
     if(strstr(argv[i], "--registry=")){
-      pChar = strchr(argv[i], '=');
-      strncpy(registryAddr, ++pChar, REG_MAX_STRING_LENGTH);
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+     strncpy(registryAddr, ++pChar, REG_MAX_STRING_LENGTH);
     }
     else if(strstr(argv[i], "--lifetime=")){
-      pChar = strchr(argv[i], '=');
+      if( !(pChar = strchr(argv[i], '=')) )continue;
       sscanf(++pChar, "%d", &(job.lifetimeMinutes));
     }
     else if(strstr(argv[i], "--appName=")){
-      pChar = strchr(argv[i], '=');
+      if( !(pChar = strchr(argv[i], '=')) )continue;
       strncpy(job.software, ++pChar, REG_MAX_STRING_LENGTH);
     }
     else if(strstr(argv[i], "--purpose=")){
-      pChar = strchr(argv[i], '=');
+      if( !(pChar = strchr(argv[i], '=')) )continue;
       strncpy(job.purpose, ++pChar, REG_MAX_STRING_LENGTH);
     }
     else if(strstr(argv[i], "--passwd=")){
-      pChar = strchr(argv[i], '=');
+      if( !(pChar = strchr(argv[i], '=')) )continue;
       strncpy(job.passphrase, ++pChar, REG_MAX_STRING_LENGTH);
     }
     else if(strstr(argv[i], "--checkpoint=")){
-      pChar = strchr(argv[i], '=');
+      if( !(pChar = strchr(argv[i], '=')) )continue;
       strncpy(job.checkpointAddress, ++pChar, REG_MAX_STRING_LENGTH);
     }
     else if(strstr(argv[i], "--dataSource=")){
-      pChar = strchr(argv[i], '=');
-      strncpy(proxyAddress, ++pChar, REG_MAX_STRING_LENGTH);
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+      strncpy(inputLabel, ++pChar, REG_MAX_STRING_LENGTH);
     }
     else if(strstr(argv[i], "--proxy=")){
-      pChar = strchr(argv[i], '=');
-      strncpy(inputLabel, ++pChar, REG_MAX_STRING_LENGTH);
-      pChar = strchr(inputLabel, ':');
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+      strncpy(proxyAddress, ++pChar, REG_MAX_STRING_LENGTH);
+      if( !(pChar = strchr(proxyAddress, ':')) )continue;
       proxyPort = atoi(++pChar);
-      pChar--; *pChar = '\0'; /* Terminate inputLabel */
+      pChar--; *pChar = '\0'; /* Terminate proxyAddress */
+      printf("Using IOProxy on %s, port %d\n", proxyAddress, proxyPort);
     }
   }
 

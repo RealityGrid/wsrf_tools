@@ -12,46 +12,101 @@
 
 void sigpipe_handle(int x) { }
 
+void printUsage();
+
 /*------------------------------------------------------------*/
 
 int main(int argc, char **argv){
 
-  char  containerAddr[256];
-  char  registryAddr[256];
-  char  dataSource[256];
-  char  iodef_label[256];
+  char  containerAddr[REG_MAX_STRING_LENGTH];
+  char  registryAddr[REG_MAX_STRING_LENGTH];
+  char  proxyAddress[REG_MAX_STRING_LENGTH];
+  char  dataSource[REG_MAX_STRING_LENGTH];
+  char  iodef_label[REG_MAX_STRING_LENGTH];
   char  buf[1024];
   char *EPR;
-  char *ioTypes;
   char *passPtr;
-  struct soap        mySoap;
-  struct msg_struct *msg;
-  xmlDocPtr doc;
-  xmlNsPtr   ns;
-  xmlNodePtr cur;
-  struct io_struct        *ioPtr;
-  int                      i, count;
+  char *pChar;
+  int                      i, j, count;
+  int                      proxyPort;
+  struct soap              mySoap;
+  struct msg_struct       *msg;
   struct registry_contents content;
   struct reg_job_details   job;
   struct reg_security_info sec;
+  struct reg_iotype_list   iotypeList;
 
   Wipe_security_info(&sec);
 
-  if(argc != 6){
-    printf("Usage:\n  createVisSWS <address of registry> "
-	   "<runtime (min)> <application> <purpose> <passphrase>\n");
+  if(argc == 1){
+    printUsage();
     return 1;
   }
 
+  snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
+  snprintf(job.group, REG_MAX_STRING_LENGTH, "RSS");
+  job.lifetimeMinutes = 0;
+  job.software[0] = '\0';
+  job.purpose[0] = '\0';
   job.inputFilename[0] = '\0';
   job.checkpointAddress[0] = '\0';
-  sprintf(job.group, "RSS");
-  strncpy(registryAddr, argv[1], REG_MAX_STRING_LENGTH);
-  sscanf(argv[2], "%d", &(job.lifetimeMinutes));
-  strncpy(job.software, argv[3], REG_MAX_STRING_LENGTH);
-  strncpy(job.purpose, argv[4], REG_MAX_STRING_LENGTH);
-  strncpy(job.passphrase, argv[5], REG_MAX_STRING_LENGTH);
-  snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
+  job.passphrase[0] = '\0';
+  registryAddr[0] = '\0';
+  proxyAddress[0] = '\0';
+  iodef_label[0] = '\0';
+
+  for(i=0; i<argc; i++){
+    if(strstr(argv[i], "--registry=")){
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+     strncpy(registryAddr, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--lifetime=")){
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+      sscanf(++pChar, "%d", &(job.lifetimeMinutes));
+    }
+    else if(strstr(argv[i], "--appName=")){
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+      strncpy(job.software, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--purpose=")){
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+      strncpy(job.purpose, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--passwd=")){
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+      strncpy(job.passphrase, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--proxy=")){
+      if( !(pChar = strchr(argv[i], '=')) )continue;
+      strncpy(proxyAddress, ++pChar, REG_MAX_STRING_LENGTH);
+      if( !(pChar = strchr(proxyAddress, ':')) )continue;
+      proxyPort = atoi(++pChar);
+      pChar--; *pChar = '\0'; /* Terminate proxyAddress */
+      printf("Using IOProxy on %s, port %d\n", proxyAddress, proxyPort);
+    }
+  }
+
+  if(registryAddr[0] == '\0'){
+    printf("No registry address supplied. ");
+    printUsage();
+    return 1;
+  }
+  else if(!job.lifetimeMinutes){
+    printf("No job lifetime supplied. ");
+    printUsage();
+    return 1;
+  }
+  else if(job.software[0] == '\0'){
+    printf("No application name supplied. ");
+    printUsage();
+    return 1;
+  }
+  else if(job.purpose[0] == '\0'){
+    printf("No job purpose supplied. ");
+    printUsage();
+    return 1;
+  }
+
   if(strstr(registryAddr, "https") == registryAddr){
 
     /* Read the location of certs etc. into global variables */
@@ -85,6 +140,84 @@ int main(int argc, char **argv){
     strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
   }
   printf("\n");
+
+  /* Look for available SWSs and get user to choose which one to
+     use as a data source */
+  if(Get_registry_entries_filtered_secure(registryAddr,
+					  &sec,  
+					  &content,
+					  "SWS") != REG_SUCCESS){
+    fprintf(stderr, "\nNo jobs to use as data source found in registry!\n");
+    return 1;
+  }
+  printf("\nAvailable jobs:\n");
+  for(i=0; i<content.numEntries; i++){
+    if( !strcmp(content.entries[i].service_type, "SWS") ){
+      printf("  %d:      EPR: %s\n", i, content.entries[i].gsh);
+      printf("           App: %s\n", content.entries[i].application);
+      printf("  User & group: %s, %s\n", 
+	     content.entries[i].user, content.entries[i].group);
+      printf("    Start time: %s\n", content.entries[i].start_date_time);
+      printf("   Description: %s\n\n", content.entries[i].job_description);
+    }
+  }
+  fprintf(stdout, "Select job to use as data source [0-%d]: ",
+	  content.numEntries-1);
+  while(1){
+    if((scanf("%d", &count) == 1) && 
+       (count > -1 && count < content.numEntries))break;
+    fprintf(stderr, "\nInvalid choice, please select job [0-%d]: ", 
+	    content.numEntries-1);
+  }
+  strncpy(dataSource, content.entries[count].gsh, REG_MAX_STRING_LENGTH);
+  Delete_registry_table(&content);
+
+  /* Ask the user to specify the (WSSE) password for access to 
+     this SWS */
+  if( !(passPtr = getpass("Enter password for this SWS: ")) ){
+
+    printf("Failed to get password from command line\n");
+    return 1;
+  }
+  strncpy(job.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+
+  /* Obtain the IOTypes from the data source */
+  Get_IOTypes(dataSource, &sec, &iotypeList);
+
+  if( iotypeList.numEntries < 1 ){
+    fprintf(stderr, "Got no IOType definitions from data source\n");
+    return 1;
+  }
+
+  fprintf(stdout, "Available IOTypes:\n");
+  count = 0;
+  for(i=0; i<iotypeList.numEntries; i++){
+    if(iotypeList.iotype[i].direction == REG_IO_OUT){
+      fprintf(stdout, "  %d: %s\n", count, iotypeList.iotype[i].label);
+      count++;
+    }
+  }
+  count--;
+
+  fprintf(stdout, "\nEnter IOType to use as data source [0-%d]: ", count);
+  while(1){
+    if(scanf("%d", &i) == 1)break;
+  }
+  fprintf(stdout, "\n");
+
+  count = 0;
+  for(j=0; j<iotypeList.numEntries; j++){
+    if(iotypeList.iotype[j].direction == REG_IO_OUT){
+      if(count == i){
+	strncpy(iodef_label, iotypeList.iotype[j].label, 
+		REG_MAX_STRING_LENGTH);
+	break;
+      }
+      count++;
+    }
+  }
+  Delete_msg_struct(&msg);
+  Delete_iotype_list(&iotypeList);
 
   /* Get the list of available Containers and ask the user to 
      choose one */
@@ -133,114 +266,6 @@ int main(int argc, char **argv){
   strcpy(containerAddr, content.entries[count].gsh);
   Delete_registry_table(&content);
 
-  /* Look for available SWSs and get user to choose which one to
-     use as a data source */
-  if(Get_registry_entries_filtered_secure(registryAddr,
-					  &sec,  
-					  &content,
-					  "SWS") != REG_SUCCESS){
-    fprintf(stderr, "\nNo jobs to use as data source found in registry!\n");
-    return 1;
-  }
-  printf("\nAvailable jobs:\n");
-  for(i=0; i<content.numEntries; i++){
-    if( !strcmp(content.entries[i].service_type, "SWS") ){
-      printf("  %d:      EPR: %s\n", i, content.entries[i].gsh);
-      printf("           App: %s\n", content.entries[i].application);
-      printf("  User & group: %s, %s\n", 
-	     content.entries[i].user, content.entries[i].group);
-      printf("    Start time: %s\n", content.entries[i].start_date_time);
-      printf("   Description: %s\n\n", content.entries[i].job_description);
-    }
-  }
-  fprintf(stdout, "Select job to use as data source [0-%d]: ",
-	  content.numEntries-1);
-  while(1){
-    if((scanf("%d", &count) == 1) && 
-       (count > -1 && count < content.numEntries))break;
-    fprintf(stderr, "\nInvalid choice, please select job [0-%d]: ", 
-	    content.numEntries-1);
-  }
-  strncpy(dataSource, content.entries[count].gsh, 256);
-  Delete_registry_table(&content);
-
-  /* Ask the user to specify the (WSSE) password for access to 
-     this SWS */
-  if( !(passPtr = getpass("Enter password for this SWS: ")) ){
-
-    printf("Failed to get password from command line\n");
-    return 1;
-  }
-  strncpy(job.passphrase, passPtr, REG_MAX_STRING_LENGTH);
-
-  /* Obtain the IOTypes from the data source */
-  soap_init(&mySoap);
-  if( Get_resource_property (&mySoap,
-			     dataSource,
-			     sec.userDN,
-			     sec.passphrase,
-			     "ioTypeDefinitions",
-			     &ioTypes) != REG_SUCCESS ){
-
-    fprintf(stderr, "Call to get ioTypeDefinitions ResourceProperty on "
-	    "%s failed\n", dataSource);
-    return 1;
-  }
-
-  if( !(doc = xmlParseMemory(ioTypes, strlen(ioTypes))) ||
-      !(cur = xmlDocGetRootElement(doc)) ){
-    fprintf(stderr, "Hit error parsing buffer\n");
-    xmlFreeDoc(doc);
-    xmlCleanupParser();
-    return 1;
-  }
-
-  ns = xmlSearchNsByHref(doc, cur,
-            (const xmlChar *) "http://www.realitygrid.org/xml/steering");
-
-  if ( xmlStrcmp(cur->name, (const xmlChar *) "ioTypeDefinitions") ){
-    fprintf(stderr, "ioTypeDefinitions not the root element\n");
-    return 1;
-  }
-  /* Step down to ReG_steer_message and then to IOType_defs */
-  cur = cur->xmlChildrenNode->xmlChildrenNode;
-
-  msg = New_msg_struct();
-  msg->io_def = New_io_def_struct();
-  parseIOTypeDef(doc, ns, cur, msg->io_def);
-
-  if(!(ioPtr = msg->io_def->first_io) ){
-    fprintf(stderr, "Got no IOType definitions from data source\n");
-    return 1;
-  }
-  i = 0;
-  fprintf(stdout, "Available IOTypes:\n");
-  while(ioPtr){
-    if( !xmlStrcmp(ioPtr->direction, (const xmlChar *)"OUT") ){
-      fprintf(stdout, "  %d: %s\n", i++, (char *)ioPtr->label);
-    }
-    ioPtr = ioPtr->next;
-  }
-  count = i-1;
-  fprintf(stdout, "\nEnter IOType to use as data source [0-%d]: ", count);
-  while(1){
-    if(scanf("%d", &i) == 1)break;
-  }
-  fprintf(stdout, "\n");
-
-  count = 0; ioPtr = msg->io_def->first_io;
-  while(ioPtr){
-    if( !xmlStrcmp(ioPtr->direction, (const xmlChar *)"OUT") ){
-      if(count == i){
-	strncpy(iodef_label, (char *)(ioPtr->label), 256);
-	break;
-      }
-      count++;
-    }
-    ioPtr = ioPtr->next;
-  }
-  Delete_msg_struct(&msg);
-
   /* Now create SWS for the vis */
   if( !(EPR = Create_steering_service(&job, containerAddr, 
 				      registryAddr, &sec)) ){
@@ -250,11 +275,21 @@ int main(int argc, char **argv){
   fprintf(stdout, "\nAddress of SWS = %s\n", EPR);
 
   /* Finally, set it up with information on the data source*/
+  if(proxyAddress[0] == '\0'){
+    /* No proxy being used */
+    snprintf(buf, 1024, "<dataSource><sourceEPR>%s</sourceEPR>"
+	     "<sourceLabel>%s</sourceLabel></dataSource>",
+	     dataSource, iodef_label);
+  }
+  else{
+    /* A proxy has been specified */
+    snprintf(buf, 1024, "<dataSource><Proxy><address>%s"
+	     "</address><port>%d</port></Proxy><sourceLabel>%s"
+	     "</sourceLabel></dataSource>",
+	     proxyAddress, proxyPort, iodef_label);
+  }
 
-  snprintf(buf, 1024, "<dataSource><sourceEPR>%s</sourceEPR>"
-	   "<sourceLabel>%s</sourceLabel></dataSource>",
-	   dataSource, iodef_label);
-
+  soap_init(&mySoap);
   if(Set_resource_property(&mySoap, EPR,
 			   job.userName, job.passphrase,
 			   buf) != REG_SUCCESS){
@@ -275,4 +310,14 @@ int main(int argc, char **argv){
   soap_done(&mySoap);
 
   return 0;
+}
+
+/*-------------------------------------------------------------------*/
+
+void printUsage(){
+  printf("Usage:\n"
+	 "  createVisSWS --registry=address_of_registry"
+	 " --lifetime=lifetime (min) --appName=name_of_application"
+	 " --purpose=purpose_of_job [--passwd=passphrase_to_give_SWS]"
+	 " [--dataSource=label_of_data_source] [--proxy=address:port]\n");
 }
