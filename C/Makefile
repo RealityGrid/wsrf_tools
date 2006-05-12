@@ -3,7 +3,7 @@ include ${REG_STEER_HOME}/make/Makefile.${ARCH}
 
 
 INCLUDE_PATH = ${STEER_INCLUDES}
-LIB_FLAGS = securityUtils.o  ${STEER_LIBS} -lReG_Steer_Utils \
+LIB_FLAGS =  ${STEER_LIBS} -lReG_Steer_Utils \
             -lReG_Steer ${STEER_LDFLAGS} 
 
 .SUFFIXES: .o .c
@@ -15,21 +15,20 @@ LIB_FLAGS = securityUtils.o  ${STEER_LIBS} -lReG_Steer_Utils \
 	${CC} ${C_FLAGS} -DREG_WITH_OPENSSL=${REG_WITH_OPENSSL_FLAG} \
 ${INCLUDE_PATH} -c $< -o $@
 
-TARGETS = addUser browseRegistry createSWS createSWSProxy createVisSWS \
-          destroySWS globalParamCreate getResourcePropertyDoc getResourceProperty
+TARGETS = addUser browseRegistry createSWS createVisSWS \
+          destroySWS globalParamCreate getResourcePropertyDoc \
+          getResourceProperty
 
 #          testSteerLib
 
 all: ${TARGETS} 
 
 addUser: addUser.o
+	echo ${LIB_FLAGS}
 	${CC} ${C_FLAGS} addUser.o ${LIB_FLAGS} -o $@
 
 createSWS: createSWS.o securityUtils.o
 	${CC} ${C_FLAGS} createSWS.o ${LIB_FLAGS} -o $@
-
-createSWSProxy: createSWSProxy.o 
-	${CC} ${C_FLAGS} createSWSProxy.o ${LIB_FLAGS} -o $@
 
 createVisSWS: createVisSWS.o securityUtils.o
 	${CC} ${C_FLAGS} createVisSWS.o ${LIB_FLAGS} -o $@
