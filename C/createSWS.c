@@ -3,6 +3,7 @@
 #include <string.h>
 #include "ReG_Steer_types.h"
 #include "ReG_Steer_Browser.h"
+#include "ReG_Steer_Steerside_WSRF.h"
 #include "ReG_Steer_Utils.h"
 #include <unistd.h>
 #include "signal.h"
@@ -10,6 +11,8 @@
 /*------------------------------------------------------------*/
 
 void sigpipe_handle(int x) { }
+
+void printUsage();
 
 /*------------------------------------------------------------*/
 
@@ -19,37 +22,92 @@ int main(int argc, char **argv){
   struct registry_contents content;
   char  containerAddr[REG_MAX_STRING_LENGTH];
   char  registryAddr[REG_MAX_STRING_LENGTH];
+  char  inputLabel[REG_MAX_STRING_LENGTH];
+  char  proxyAddress[REG_MAX_STRING_LENGTH];
+  char  buf[1024];
   char *EPR;
   char *pChar = NULL;
   struct reg_job_details   job;
   struct reg_security_info sec;
+  int  proxyPort;
+  struct soap mySoap;
 
   job.userName[0] = '\0';
   snprintf(job.group, REG_MAX_STRING_LENGTH, "RSS");
+  job.lifetimeMinutes = 0;
   job.software[0] = '\0';
   job.purpose[0] = '\0';
   job.inputFilename[0] = '\0';
   job.checkpointAddress[0] = '\0';
   job.passphrase[0] = '\0';
+  registryAddr[0] = '\0';
+  inputLabel[0] = '\0';
+  proxyAddress[0] = '\0';
 
   Wipe_security_info(&sec);
 
-  if( (argc != 6) && (argc != 7) ){
-    printf("Usage:\n  createSWS <address of registry>"
-	   " <lifetime (min)> <application> <purpose> <passphrase>"
-	   " [checkpoint EPR]\n");
+  if( (argc == 1) ){
+    printUsage();
     return 1;
   }
 
-  strncpy(registryAddr, argv[1], REG_MAX_STRING_LENGTH);
-  sscanf(argv[2], "%d", &(job.lifetimeMinutes));
-  strncpy(job.software, argv[3], REG_MAX_STRING_LENGTH);
-  strncpy(job.purpose, argv[4], REG_MAX_STRING_LENGTH);
-  snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
-  strncpy(job.passphrase, argv[5], REG_MAX_STRING_LENGTH);
+  for(i=0; i<argc; i++){
+    if(strstr(argv[i], "--registry=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(registryAddr, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--lifetime=")){
+      pChar = strchr(argv[i], '=');
+      sscanf(++pChar, "%d", &(job.lifetimeMinutes));
+    }
+    else if(strstr(argv[i], "--appName=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(job.software, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--purpose=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(job.purpose, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--passwd=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(job.passphrase, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--checkpoint=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(job.checkpointAddress, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--dataSource=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(proxyAddress, ++pChar, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--proxy=")){
+      pChar = strchr(argv[i], '=');
+      strncpy(inputLabel, ++pChar, REG_MAX_STRING_LENGTH);
+      pChar = strchr(inputLabel, ':');
+      proxyPort = atoi(++pChar);
+      pChar--; *pChar = '\0'; /* Terminate inputLabel */
+    }
+  }
 
-  if(argc == 7){
-    strncpy(job.checkpointAddress, argv[6], REG_MAX_STRING_LENGTH);
+  if(registryAddr[0] == '\0'){
+    printf("No registry address supplied. ");
+    printUsage();
+    return 1;
+  }
+  else if(!job.lifetimeMinutes){
+    printf("No job lifetime supplied. ");
+    printUsage();
+    return 1;
+  }
+  else if(job.software[0] == '\0'){
+    printf("No application name supplied. ");
+    printUsage();
+    return 1;
+  }
+  else if(job.purpose[0] == '\0'){
+    printf("No job purpose supplied. ");
+    printUsage();
+    return 1;
   }
 
   if(strstr(registryAddr, "https") == registryAddr){
@@ -72,6 +130,7 @@ int main(int argc, char **argv){
     strncpy(sec.passphrase, pChar, REG_MAX_STRING_LENGTH);
   }
   else{
+    /* Registry is not using SSL... */
     sec.use_ssl = 0;
 
     if( !(pChar = getpass("Enter your username for registry: ")) ){
@@ -89,9 +148,9 @@ int main(int argc, char **argv){
     strncpy(sec.passphrase, pChar, REG_MAX_STRING_LENGTH);
   }
 
+  /* Look up available Containers */
   if(Get_registry_entries_filtered_secure(registryAddr,
-					  &sec,
-					  &content,
+					  &sec, &content,
 					  "Container registry") != REG_SUCCESS){
     printf("Search for registry of available containers failed\n");
     return 1;
@@ -142,6 +201,54 @@ int main(int argc, char **argv){
   else{
     printf("\nFAILED to create SWS :-(\n");
   }
-	 
+
+  /* Finally, set it up with information on the data proxy if
+     required */
+  if(proxyAddress[0] != '\0'){
+    i = snprintf(buf, 1024, "<dataSink><Proxy><address>%s</address>"
+		 "<port>%d</port></Proxy></dataSink>",
+		 proxyAddress, proxyPort);
+
+    if(inputLabel[0]){
+      snprintf(&(buf[i]), 1024, "<dataSource><Proxy><address>%s"
+	       "</address><port>%d</port></Proxy><sourceLabel>%s"
+	       "</sourceLabel></dataSource>",
+	       proxyAddress, proxyPort, inputLabel);
+    }
+
+    soap_init(&mySoap);
+    if(Set_resource_property(&mySoap, EPR, job.userName, job.passphrase,
+			     buf) != REG_SUCCESS){
+      fprintf(stderr, "Failed to initialize SWS with info. on data proxy :-(");
+
+      if(Destroy_WSRP(EPR, &sec) == REG_SUCCESS){
+	fprintf(stderr, "  => Destroyed %s\n", EPR);
+      }
+      else{
+	fprintf(stderr, "    Also failed to clean-up the SWS %s\n", EPR);
+      }
+      soap_end(&mySoap);
+      soap_done(&mySoap);
+      return 1;
+    }
+    else{
+      printf("\nSWS initialized with address of proxy OK :-)\n\n");
+    }
+
+    soap_end(&mySoap);
+    soap_done(&mySoap);
+  } /* end if(proxyAddress[0] != '\0') */
+
   return 0;
+}
+
+/*-------------------------------------------------------------------*/
+
+void printUsage(){
+  printf("Usage:\n"
+	 "  createSWSProxy --registry=address_of_registry"
+	 " --lifetime=lifetime (min) --appName=name_of_application"
+	 " --purpose=purpose_of_job [--passwd=passphrase_to_give_SWS]"
+	 " [--checkpoint=checkpoint_EPR] [--dataSource=label_of_data_source]"
+	 " [--proxy=address:port]\n");
 }
