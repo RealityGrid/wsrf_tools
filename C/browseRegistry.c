@@ -19,6 +19,7 @@ int main(int argc, char **argv){
 
   char   registryEPR[128];
   char   filterString[128];
+  char   buf[256];
   char  *passPtr;
   int    i;
   struct registry_contents content;
@@ -60,17 +61,22 @@ int main(int argc, char **argv){
     if( !(passPtr = getpass("Enter passphrase for registry: ")) ){
       printf("Failed to get registry passphrase from command line\n");
       return 1;
-      }
+    }
     printf("\n");
     strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
 
-    if( !(passPtr = getpass("Enter your username: ")) ){
+    snprintf(buf, 256, "Enter your username [%s]: ", getenv("USER"));
+    if( !(passPtr = getpass(buf)) ){
       printf("Failed to get username from command line\n");
       return 1;
     }
     printf("\n");
-    strncpy(sec.userDN, passPtr, REG_MAX_STRING_LENGTH);
-    
+    if(strlen(passPtr) > 0){
+      strncpy(sec.userDN, passPtr, REG_MAX_STRING_LENGTH);
+    }
+    else{
+      strncpy(sec.userDN, getenv("USER"), REG_MAX_STRING_LENGTH);
+    }
   }
 
   /* Finally, we can contact the registry */
