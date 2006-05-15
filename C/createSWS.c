@@ -140,7 +140,8 @@ int main(int argc, char **argv){
     }
     printf("\n");
     strncpy(sec.userDN, pChar, REG_MAX_STRING_LENGTH);    
-    
+    strncpy(job.userName, pChar, REG_MAX_STRING_LENGTH);
+
     if( !(pChar = getpass("Enter passphrase for registry: ")) ){
       printf("Failed to get registry passphrase from command line\n");
       return 1;
