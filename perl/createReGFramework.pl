@@ -68,9 +68,8 @@ my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
 my $time_now = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
                      $year+1900,$mon+1,$mday,$hour,$min,$sec;
 
-my $DN = "";
-if(defined $ENV{HTTPS_CERT_FILE}){
-    open(CERT_FILE, $ENV{HTTPS_CERT_FILE}) || die("can't open your cert. file: $!");
+my $DN = $ENV{USER};
+if(defined $ENV{HTTPS_CERT_FILE} && open(CERT_FILE, $ENV{HTTPS_CERT_FILE})){
     my @lines = <CERT_FILE>;
     close(CERT_FILE);
     $DN="";
@@ -84,9 +83,6 @@ if(defined $ENV{HTTPS_CERT_FILE}){
 	}
     }
     print "Your DN = $DN\n";
-}
-else{
-    $DN = $ENV{USER};
 }
 
 open(CONTAINER_FILE, "container_addresses.txt") || die("can't open container list: $!");
