@@ -134,13 +134,20 @@ int main(int argc, char **argv){
     /* Registry is not using SSL... */
     sec.use_ssl = 0;
 
-    if( !(pChar = getpass("Enter your username for registry: ")) ){
+    snprintf(buf, 1024, "Enter your username for registry [%s]: ", getenv("USER"));
+    if( !(pChar = getpass(buf)) ){
       printf("Failed to get username from command line\n");
       return 1;
     }
     printf("\n");
-    strncpy(sec.userDN, pChar, REG_MAX_STRING_LENGTH);    
-    strncpy(job.userName, pChar, REG_MAX_STRING_LENGTH);
+    if(strlen(pChar) == 0){
+      snprintf(sec.userDN, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
+      snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", getenv("USER"));
+    }
+    else{
+      strncpy(sec.userDN, pChar, REG_MAX_STRING_LENGTH);    
+      strncpy(job.userName, pChar, REG_MAX_STRING_LENGTH);
+    }
 
     if( !(pChar = getpass("Enter passphrase for registry: ")) ){
       printf("Failed to get registry passphrase from command line\n");
@@ -248,7 +255,7 @@ int main(int argc, char **argv){
 
 void printUsage(){
   printf("Usage:\n"
-	 "  createSWSProxy --registry=address_of_registry"
+	 "  createSWS --registry=address_of_registry"
 	 " --lifetime=lifetime (min) --appName=name_of_application"
 	 " --purpose=purpose_of_job [--passwd=passphrase_to_give_SWS]"
 	 " [--checkpoint=checkpoint_EPR] [--dataSource=label_of_data_source]"
