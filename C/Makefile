@@ -27,14 +27,14 @@ addUser: addUser.o
 	echo ${LIB_FLAGS}
 	${CC} ${C_FLAGS} addUser.o ${LIB_FLAGS} -o $@
 
-createSWS: createSWS.o securityUtils.o
+createSWS: createSWS.o 
 	${CC} ${C_FLAGS} createSWS.o ${LIB_FLAGS} -o $@
 
-createVisSWS: createVisSWS.o securityUtils.o
+createVisSWS: createVisSWS.o
 	${CC} ${C_FLAGS} createVisSWS.o ${LIB_FLAGS} -o $@
 
-browseRegistry: browseRegistry.o securityUtils.o
-	${CC} ${C_FLAGS} browseRegistry.o ${LIB_FLAGS} -o $@
+browseRegistry: browseRegistry.o
+	${CC} ${C_FLAGS} browseRegistry.o configFileParser.o ${LIB_FLAGS} -o $@
 
 destroySWS: destroySWS.o
 	${CC} ${C_FLAGS} destroySWS.o ${LIB_FLAGS} -o $@
@@ -58,4 +58,4 @@ clean:
 	rm -f *.o
 	rm -f *~
 
-${TARGETS}: securityUtils.o
+${TARGETS}: configFileParser.o
