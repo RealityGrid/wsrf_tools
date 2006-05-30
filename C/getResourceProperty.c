@@ -18,7 +18,7 @@ int main(int argc, char **argv){
   const int   MAX_LEN = 1024;
   struct soap mySoap;
   char       *passPtr;
-  char        input[MAX_LEN];
+  /*char        input[MAX_LEN];*/
   char        rpName[MAX_LEN];
   char        username[MAX_LEN];
   char       *rpOut;
