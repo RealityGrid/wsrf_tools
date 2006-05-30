@@ -28,7 +28,7 @@ addUser: addUser.o
 	${CC} ${C_FLAGS} addUser.o ${LIB_FLAGS} -o $@
 
 createSWS: createSWS.o 
-	${CC} ${C_FLAGS} createSWS.o ${LIB_FLAGS} -o $@
+	${CC} ${C_FLAGS} createSWS.o configFileParser.o ${LIB_FLAGS} -o $@
 
 createVisSWS: createVisSWS.o
 	${CC} ${C_FLAGS} createVisSWS.o ${LIB_FLAGS} -o $@

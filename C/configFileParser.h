@@ -3,6 +3,11 @@
 struct tool_conf {
   char registryEPR[REG_MAX_STRING_LENGTH];
   char filterPattern[REG_MAX_STRING_LENGTH];
+  int  lifetimeMinutes;
+  char appName[REG_MAX_STRING_LENGTH];
+  char appPasswd[REG_MAX_STRING_LENGTH];
+  char proxyAddress[REG_MAX_STRING_LENGTH];
+  int  proxyPort;
 };
 
 int Get_tools_config(char *file,

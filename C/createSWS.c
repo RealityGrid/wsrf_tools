@@ -7,6 +7,7 @@
 #include "ReG_Steer_Utils.h"
 #include <unistd.h>
 #include "signal.h"
+#include "configFileParser.h"
 
 /*------------------------------------------------------------*/
 
@@ -29,7 +30,8 @@ int main(int argc, char **argv){
   char *pChar = NULL;
   struct reg_job_details   job;
   struct reg_security_info sec;
-  int  proxyPort;
+  struct tool_conf         conf;
+  int         proxyPort;
   struct soap mySoap;
 
   job.userName[0] = '\0';
@@ -90,6 +92,10 @@ int main(int argc, char **argv){
     }
   }
 
+  if(Get_tools_config(NULL, &conf) != REG_SUCCESS){
+    printf("WARNING: Failed to read tools.conf config. file\n");
+  }
+
   if(registryAddr[0] == '\0'){
     printf("No registry address supplied. ");
     printUsage();
@@ -134,7 +140,8 @@ int main(int argc, char **argv){
     /* Registry is not using SSL... */
     sec.use_ssl = 0;
 
-    snprintf(buf, 1024, "Enter your username for registry [%s]: ", getenv("USER"));
+    snprintf(buf, 1024, "Enter your username for registry [%s]: ", 
+	     getenv("USER"));
     if( !(pChar = getpass(buf)) ){
       printf("Failed to get username from command line\n");
       return 1;

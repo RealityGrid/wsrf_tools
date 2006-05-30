@@ -4,7 +4,7 @@
 #include <ReG_Steer_Browser.h>
 #include <unistd.h>
 #include "signal.h"
-#include "securityUtils.h"
+#include "configFileParser.h"
 
 #include "libxml/xmlmemory.h"
 #include "libxml/parser.h"
@@ -17,27 +17,50 @@ void sigpipe_handle(int x) { }
 
 int main(int argc, char **argv){
 
-  char   registryEPR[128];
-  char   filterString[128];
+  char   registryEPR[REG_MAX_STRING_LENGTH];
+  char   filterString[REG_MAX_STRING_LENGTH];
   char   buf[256];
   char  *passPtr;
   int    i;
   struct registry_contents content;
   struct reg_security_info sec;
+  struct tool_conf         conf;
 
+  memset(filterString, '\0', REG_MAX_STRING_LENGTH);
+  memset(registryEPR, '\0', REG_MAX_STRING_LENGTH);
   printf("\n");
-  if(argc < 2 || argc > 3){
-    printf("Usage:\n  browseRegistry <EPR of Registry "
-	   "(ServiceGroup)> [<pattern to filter on>]\n");
-    return 1;
-  }
-  strncpy(registryEPR, argv[1], 128);
-  Wipe_security_info(&sec);
-  memset(filterString, '\0', 128);
 
-  if(argc==3){
-    strncpy(filterString, argv[2], 128);
+  for(i=0; i<argc; i++){
+    if(strstr(argv[i], "--registry=")){
+      if( !(passPtr = strchr(argv[i], '=')) )continue;
+     strncpy(registryEPR, ++passPtr, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--pattern=")){
+      if( !(passPtr = strchr(argv[i], '=')) )continue;
+     strncpy(filterString, ++passPtr, REG_MAX_STRING_LENGTH);
+    }
+    else if(strstr(argv[i], "--help")){
+      printf("Usage:\n  browseRegistry [--registry=EPR of Registry] "
+	     " [--pattern=pattern to filter on]\n");
+      printf("\nIf either argument is not specified, the file "
+	     "~/.realitygrid/tools.conf will be\nchecked for "
+	     "appropriate values.\n");
+      return 1;
+    }
   }
+
+  if(Get_tools_config(NULL, &conf) != REG_SUCCESS){
+    printf("WARNING: Failed to read tools.conf config. file\n");
+  }
+
+  if(!registryEPR[0]){
+    strncpy(registryEPR, conf.registryEPR, REG_MAX_STRING_LENGTH);
+  }
+  if(!filterString[0]){
+    strncpy(filterString, conf.filterPattern, REG_MAX_STRING_LENGTH);
+  }
+
+  Wipe_security_info(&sec);
 
   if(strstr(registryEPR, "https") == registryEPR){
 
@@ -57,14 +80,8 @@ int main(int argc, char **argv){
 
   }
   else{
-    /* No SSL - get the passphrase for the registry */
-    if( !(passPtr = getpass("Enter passphrase for registry: ")) ){
-      printf("Failed to get registry passphrase from command line\n");
-      return 1;
-    }
-    printf("\n");
-    strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
 
+    /* No SSL - get the passphrase for the registry */
     snprintf(buf, 256, "Enter your username [%s]: ", getenv("USER"));
     if( !(passPtr = getpass(buf)) ){
       printf("Failed to get username from command line\n");
@@ -77,6 +94,13 @@ int main(int argc, char **argv){
     else{
       strncpy(sec.userDN, getenv("USER"), REG_MAX_STRING_LENGTH);
     }
+
+    printf("\n");
+    if( !(passPtr = getpass("Enter passphrase for registry: ")) ){
+      printf("Failed to get registry passphrase from command line\n");
+      return 1;
+    }
+    strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
   }
 
   /* Finally, we can contact the registry */
@@ -97,6 +121,7 @@ int main(int argc, char **argv){
     }
   }
 
+  printf("\n");
   for(i=0; i<content.numEntries; i++){
     printf("Entry %d - type: %s\n", i, content.entries[i].service_type);
     printf("           EPR: %s\n", content.entries[i].gsh);
