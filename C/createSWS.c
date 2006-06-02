@@ -97,21 +97,36 @@ int main(int argc, char **argv){
   }
 
   if(registryAddr[0] == '\0'){
-    printf("No registry address supplied. ");
-    printUsage();
-    return 1;
+    if(conf.registryEPR[0]){
+      strncpy(registryAddr, conf.registryEPR, REG_MAX_STRING_LENGTH);
+    }
+    else{
+      printf("No registry address supplied on cmd line or in config file. ");
+      printUsage();
+      return 1;
+    }
   }
-  else if(!job.lifetimeMinutes){
-    printf("No job lifetime supplied. ");
-    printUsage();
-    return 1;
+  if(!job.lifetimeMinutes){
+    if(conf.lifetimeMinutes){
+      job.lifetimeMinutes = conf.lifetimeMinutes;
+    }
+    else{
+      printf("No job lifetime supplied on cmd line or in config file. ");
+      printUsage();
+      return 1;
+    }
   }
-  else if(job.software[0] == '\0'){
-    printf("No application name supplied. ");
-    printUsage();
-    return 1;
+  if(job.software[0] == '\0'){
+    if(conf.appName[0]){
+      strncpy(job.software, conf.appName, REG_MAX_STRING_LENGTH);
+    }
+    else{
+      printf("No application name supplied on cmd line or in config file. ");
+      printUsage();
+      return 1;
+    }
   }
-  else if(job.purpose[0] == '\0'){
+  if(job.purpose[0] == '\0'){
     printf("No job purpose supplied. ");
     printUsage();
     return 1;
