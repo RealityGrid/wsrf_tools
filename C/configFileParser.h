@@ -8,6 +8,7 @@ struct tool_conf {
   char appPasswd[REG_MAX_STRING_LENGTH];
   char proxyAddress[REG_MAX_STRING_LENGTH];
   int  proxyPort;
+  char checkPointTree[REG_MAX_STRING_LENGTH];
 };
 
 int Get_tools_config(char *file,
