@@ -17,7 +17,7 @@ ${INCLUDE_PATH} -c $< -o $@
 
 TARGETS = addUser browseRegistry createSWS createVisSWS \
           destroySWS globalParamCreate getResourcePropertyDoc \
-          getResourceProperty
+          getResourceProperty createChkTree
 
 #          testSteerLib
 
@@ -26,6 +26,9 @@ all: ${TARGETS}
 addUser: addUser.o
 	echo ${LIB_FLAGS}
 	${CC} ${C_FLAGS} addUser.o ${LIB_FLAGS} -o $@
+
+createChkTree: createChkTree.o
+	${CC} ${C_FLAGS} $< configFileParser.o ${LIB_FLAGS} -o $@
 
 createSWS: createSWS.o 
 	${CC} ${C_FLAGS} createSWS.o configFileParser.o ${LIB_FLAGS} -o $@
@@ -51,10 +54,15 @@ getResourceProperty: getResourceProperty.o
 #testSteerLib: testSteerLib.o
 #	${CC} ${C_FLAGS} testSteerLib.o ${LIB_FLAGS} -o $@
 
+install:
+	-mkdir ${HOME}/.realitygrid
+	cp -i conf/tools.conf ${HOME}/.realitygrid/.
+
 clean:
 	rm -f browseRegistry createSWS createVisSWS 
 	rm -f destroySWS globalParamCreate getResourcePropertyDoc
 	rm -f addUser getResourceProperty testSteerLib
+	rm -f createChkTree
 	rm -f *.o
 	rm -f *~
 
