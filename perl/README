@@ -18,8 +18,8 @@ dependencies be installed.  See the WSRF::Lite README for details.
 The Scripts
 -----------
 
-Below we describe each of the scripts which are listed in alphabetical
-order.
+Below we describe each of the scripts (which are listed in alphabetical
+order).
 
 addChkNode.pl <EPR of checkpoint node to add to>
 -------------
@@ -110,17 +110,61 @@ getRegistryEntries.pl <EPR of registry> [registry passphrase]
 ---------------------
 Queries the specified registry and prints out all entries.
 
-getResourcePropertyDoc.pl
+getResourcePropertyDoc.pl <EPR of service>
 -------------------------
+Gets the complete ResourceProperty document from the service at the
+specified endpoint.
 
-globalParamCreate.pl
-pruneChkTree.pl
+globalParamCreate.pl <EPR of parent>
+--------------------
+Allows the user to construct 'global' parameters for a coupled model.
+This script queries the parameters defined by each child of the supplied
+service.  The user can then specify which parameters are in fact
+equivalent resulting in the creation of a new, 'global' parameter for the
+parent service.  This new parameter replaces all of its constituents in
+the list of parameters defined by the parent service (i.e. as seen by
+a steering client connecting to that service).
+
+pruneChkTree.pl <ID or GSH of starting node>
+---------------
+For removing whole branches of a checkpoint tree.  Deletes every node
+below (and including) the one specified.
+
 testHarness.pl
+--------------
+TESTING: performs various operations, purely for testing/code development.
+
 visLauncher.pl
-wsrf_getResourceProperties.pl
-wsrf_insertResourceProperty.pl
-wsrf_ServiceGroupAddContainer.pl
-wsrf_ServiceGroupAdd.pl
-wsrf_ServiceGroupAddSG.pl
-wsrf_ServiceGroupAddSWS.pl
-wsrf_updateResourceProperty.pl
+--------------
+Similar to appLauncher.pl but queries the top-level registry for existing 
+SWSs and then prompts the user to choose which one to use as a data source.
+(The chosen SWS must represent an application that is _running_.)
+The script then queries the chosen SWS for its data channels and again
+the user is prompted to choose the channel to use.  An SWS is then created
+for a visualization job and initialized with the necessary data.
+
+wsrf_getResourceProperties.pl <EPR of service> <Name of ResourceProperty>
+-----------------------------
+Query the specified service and return the value of the named 
+ResourceProperty.
+
+wsrf_insertResourceProperty.pl <EPR of service> <Name of ResourceProperty> <value>
+------------------------------
+Script to insert a ResourceProperty into a WS-Resource.
+
+wsrf_ServiceGroupAddContainer.pl <ServiceGroup EPR> <Container URL> <ServiceGroup passphrase>
+--------------------------------
+Registers the Container with the specified ServiceGroup.
+
+wsrf_ServiceGroupAddSG.pl <EPR of registry> <EPR of ServiceGroup to register>
+-------------------------
+This script adds a WS-Resource to a ServiceGroup.
+
+wsrf_ServiceGroupAddSWS.pl <EPR of registry> <EPR of SWS>
+--------------------------
+This script adds an SWS to a ServiceGroup (registry).
+
+wsrf_updateResourceProperty.pl <EPR of service> <Property name> <New value> 
+------------------------------
+Script to update the value of an existing ResourceProperty of a
+WS-Resource.
