@@ -1,0 +1,100 @@
+Introduction
+------------
+
+This directory contains a variety of perl scripts used to interact with
+the WSRF-based framework for the RealityGrid computational steering
+system.  Due to the rather complex perl dependencies of these scripts
+they are intended for use in administration rather than day-to-day
+activities.  C-based utilities are available for doing the sorts of 
+tasks that the average user might wish to undertake.
+ 
+Dependencies
+------------
+
+The majority of the scripts require that WSRF::Lite (available from
+http://www.sve.man.ac.uk/Research/AtoZ/ILCT) and its associated
+dependencies be installed.  See the WSRF::Lite README for details.
+
+The Scripts
+-----------
+
+Below we describe each of the scripts which are listed in alphabetical
+order.
+
+addChkNode.pl <EPR of checkpoint node to add to>
+-------------
+TESTING: A script for testing a checkpoint tree.  It calls the addNode
+method of the supplied node and passes example XML for the checkpoint
+meta-data, logged steering commands, input file and node meta-data.
+
+addUserToEntry.pl <EPR of registry entry> <username>
+-----------------
+TESTING: Script to add the specified username to the list of people
+able to access the specified registry entry.
+
+appLauncher.pl
+--------------
+Creates a SWS for use by a steerable application.
+
+Reads the address of the top-level registry (and any associated password)
+from reg_registry_info.sh;
+Queries registry for registry of containers;
+Queries that registry and presents list of available containers;
+User chooses a container;
+Prompts user for a passphrase to protect the SWS;
+Calls the factory in the chosen container to create the SWS;
+Registers the new SWS with the top-level registry.
+
+avsLauncher.pl
+--------------
+TESTING: a test version of visLauncher.pl
+
+coupledAppLauncher.pl <EPR of parent> <no. of children>
+---------------------
+Use to create tree of SWSs for a coupled model
+
+createChkTree.pl <URL> <CP Data> <Input file> <Meta-data>
+----------------
+Create a new CheckPointTree by calling the createNewTree method of the 
+factory at address URL.  <Meta-data> is the description (label) to give
+the tree - e.g. describing the experiment for which it will hold data.
+The other two arguments can be empty ("").
+
+createReGFramework.pl <EPR of container> [passphrase]
+--------------------- 
+This script sets up the registries used by the steering system.  Once
+you have a WSRF::Lite container up and running then executing this
+script is your next step.  It's one mandatory argument specifies the
+address of the container (e.g. http://localhost:50000/) in which to
+create the registries.  A passphrase to protect access to the new
+registries can be specified if desired. (Note that this passphrase
+will be passed over the network in clear text during this
+configuration phase unless the chosen container is using SSL.)
+
+createRegistry.pl <EPR of container> [passphrase]
+-----------------
+Simple script to create a registry in the specified container.
+
+createSWSResource.pl <EPR of factory> <Namespace of factory>
+--------------------
+Simple script to create a SWS.
+
+destroyChkNode.pl
+-----------------
+
+destroyChkTree.pl
+Destroy.pl
+Detach.pl
+getRegistryEntries.pl
+getResourcePropertyDoc.pl
+globalParamCreate.pl
+pruneChkTree.pl
+testHarness.pl
+visLauncher.pl
+wsrf_getResourceProperties.pl
+wsrf_insertResourceProperty.pl
+wsrf_ServiceGroupAddContainer.pl
+wsrf_ServiceGroupAdd.pl
+wsrf_ServiceGroupAddSG.pl
+wsrf_ServiceGroupAddSWS.pl
+wsrf_updateResourceProperty.pl
