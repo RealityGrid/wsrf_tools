@@ -1,4 +1,3 @@
-http://localhost:50005/
+https://bala.mvc.mcc.ac.uk:50050/
 http://methuselah.mvc.mcc.ac.uk:50005/
-http://calculon.cs.man.ac.uk:50005/
 http://bala.mvc.mcc.ac.uk:50005/

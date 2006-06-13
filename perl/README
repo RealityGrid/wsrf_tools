@@ -79,14 +79,40 @@ createSWSResource.pl <EPR of factory> <Namespace of factory>
 --------------------
 Simple script to create a SWS.
 
-destroyChkNode.pl
------------------
+destroyChkNode.pl <EPR of node> 
+----------------- 
+TESTING: Destroys a single node from a checkpoint tree. Any child
+nodes of the destroyed node become children of its parent.  Similarly,
+any log of steering commands associated with the destroyed node are
+added to the logs of each of its children.
 
-destroyChkTree.pl
-Destroy.pl
-Detach.pl
-getRegistryEntries.pl
+This functionality is now implemented within the Destroy method of the
+CheckPointTreeNode service itself.
+
+destroyChkTree.pl <EPR of root node>
+-----------------
+Destroys a complete checkpoint tree by calling the Destroy method
+of the specified node.
+
+Destroy.pl <EPR of WS-Resource to destroy>
+----------
+Calls Destroy on the specified service. It uses the WSRL namespace and
+therefore works for a variety of types of service including SWSs and
+regServiceGroupEntries.  Prompts for the passphrase used to protect
+the service.
+
+Detach.pl <EPR of SWS>
+---------
+Calls the Detach method of the specified Steering Web Service.  For use
+in case of problems with a steering client.
+
+getRegistryEntries.pl <EPR of registry> [registry passphrase]
+---------------------
+Queries the specified registry and prints out all entries.
+
 getResourcePropertyDoc.pl
+-------------------------
+
 globalParamCreate.pl
 pruneChkTree.pl
 testHarness.pl

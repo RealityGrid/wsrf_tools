@@ -11,6 +11,7 @@ use SOAP::Lite;
 if(@ARGV != 1){
     print "Useage:\n";
     print "  ./addChkNode.pl <EPR of node to add to>\n";
+    exit;
 }
 
 my $gsh = $ARGV[0];
