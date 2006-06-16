@@ -7,6 +7,7 @@
 #include "ReG_Steer_Utils.h"
 #include "ReG_Steer_Utils_WSRF.h"
 #include "soapH.h"
+#include "configFileParser.h"
 
 /*------------------------------------------------------------*/
 
@@ -23,18 +24,16 @@ int main(int argc, char **argv){
   char  proxyAddress[REG_MAX_STRING_LENGTH];
   char  dataSource[REG_MAX_STRING_LENGTH];
   char  iodef_label[REG_MAX_STRING_LENGTH];
-  char  buf[1024];
   char *EPR;
   char *passPtr;
   char *pChar;
   int                      i, j, count;
-  int                      proxyPort;
-  struct soap              mySoap;
-  struct msg_struct       *msg;
+  int                      proxyPort, status;
   struct registry_contents content;
   struct reg_job_details   job;
   struct reg_security_info sec;
   struct reg_iotype_list   iotypeList;
+  struct tool_conf         conf;
 
   Wipe_security_info(&sec);
 
@@ -86,20 +85,39 @@ int main(int argc, char **argv){
     }
   }
 
+  if(Get_tools_config(NULL, &conf) != REG_SUCCESS){
+    printf("WARNING: Failed to read tools.conf config. file\n");
+  }
+
   if(registryAddr[0] == '\0'){
-    printf("No registry address supplied. ");
-    printUsage();
-    return 1;
+    if(conf.registryEPR[0]){
+      strncpy(registryAddr, conf.registryEPR, REG_MAX_STRING_LENGTH);
+    }
+    else{
+      printf("No registry address supplied. ");
+      printUsage();
+      return 1;
+    }
   }
   else if(!job.lifetimeMinutes){
-    printf("No job lifetime supplied. ");
-    printUsage();
-    return 1;
+    if(conf.lifetimeMinutes){
+      job.lifetimeMinutes = conf.lifetimeMinutes;
+    }
+    else{
+      printf("No job lifetime supplied. ");
+      printUsage();
+      return 1;
+    }
   }
   else if(job.software[0] == '\0'){
-    printf("No application name supplied. ");
-    printUsage();
-    return 1;
+    if(conf.appName[0]){
+      strncpy(job.software, conf.appName, REG_MAX_STRING_LENGTH);
+    }
+    else{
+      printf("No application name supplied. ");
+      printUsage();
+      return 1;
+    }
   }
   else if(job.purpose[0] == '\0'){
     printf("No job purpose supplied. ");
@@ -216,7 +234,6 @@ int main(int argc, char **argv){
       count++;
     }
   }
-  Delete_msg_struct(&msg);
   Delete_iotype_list(&iotypeList);
 
   /* Get the list of available Containers and ask the user to 
@@ -277,22 +294,16 @@ int main(int argc, char **argv){
   /* Finally, set it up with information on the data source*/
   if(proxyAddress[0] == '\0'){
     /* No proxy being used */
-    snprintf(buf, 1024, "<dataSource><sourceEPR>%s</sourceEPR>"
-	     "<sourceLabel>%s</sourceLabel></dataSource>",
-	     dataSource, iodef_label);
+    status = Set_service_data_source(EPR, dataSource, 0, 
+				     iodef_label, &sec);
   }
   else{
-    /* A proxy has been specified */
-    snprintf(buf, 1024, "<dataSource><Proxy><address>%s"
-	     "</address><port>%d</port></Proxy><sourceLabel>%s"
-	     "</sourceLabel></dataSource>",
-	     proxyAddress, proxyPort, iodef_label);
+    status = Set_service_data_source(EPR, proxyAddress, proxyPort, 
+				     iodef_label, &sec);
   }
 
-  soap_init(&mySoap);
-  if(Set_resource_property(&mySoap, EPR,
-			   job.userName, job.passphrase,
-			   buf) != REG_SUCCESS){
+  if(status != REG_SUCCESS){
+
     fprintf(stderr, "Failed to initialize SWS with info. on data source :-(");
 
     if(Destroy_WSRP(EPR, &sec) == REG_SUCCESS){
@@ -301,13 +312,9 @@ int main(int argc, char **argv){
     else{
       fprintf(stderr, "    Also failed to clean-up the SWS %s\n", EPR);
     }
-    soap_end(&mySoap);
-    soap_done(&mySoap);
+
     return 1;
   }
-
-  soap_end(&mySoap);
-  soap_done(&mySoap);
 
   return 0;
 }
