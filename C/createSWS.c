@@ -90,6 +90,10 @@ int main(int argc, char **argv){
       pChar--; *pChar = '\0'; /* Terminate proxyAddress */
       printf("Using IOProxy on %s, port %d\n", proxyAddress, proxyPort);
     }
+    else if(strstr(argv[i], "--help")){
+      printUsage();
+      return 0;
+    }
   }
 
   if(Get_tools_config(NULL, &conf) != REG_SUCCESS){
