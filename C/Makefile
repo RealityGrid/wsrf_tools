@@ -31,10 +31,10 @@ createChkTree: createChkTree.o
 	${CC} ${C_FLAGS} $< configFileParser.o ${LIB_FLAGS} -o $@
 
 createSWS: createSWS.o 
-	${CC} ${C_FLAGS} createSWS.o configFileParser.o ${LIB_FLAGS} -o $@
+	${CC} ${C_FLAGS} $< configFileParser.o ${LIB_FLAGS} -o $@
 
 createVisSWS: createVisSWS.o
-	${CC} ${C_FLAGS} createVisSWS.o ${LIB_FLAGS} -o $@
+	${CC} ${C_FLAGS} $< configFileParser.o ${LIB_FLAGS} -o $@
 
 browseRegistry: browseRegistry.o
 	${CC} ${C_FLAGS} browseRegistry.o configFileParser.o ${LIB_FLAGS} -o $@
