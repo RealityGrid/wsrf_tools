@@ -97,7 +97,6 @@ int Get_tools_config(char *file,
 	    strncpy(buf, (char *)attrValue, len);
 	    buf[len] = '\0';
 	    conf->lifetimeMinutes = atoi(buf);
-	    printf("lifetime >>%d<<\n", conf->lifetimeMinutes);
 	    xmlFree(attrValue);
 	  }
 	}
@@ -107,7 +106,6 @@ int Get_tools_config(char *file,
 	    len = xmlStrlen(attrValue);
 	    strncpy(conf->appName, (char *)attrValue, len);
 	    conf->appName[len] = '\0';
-	    printf("app. name >>%s<<\n", conf->appName);
 	    xmlFree(attrValue);
 	  }
 	}
@@ -117,7 +115,6 @@ int Get_tools_config(char *file,
 	    len = xmlStrlen(attrValue);
 	    strncpy(conf->appPasswd, (char *)attrValue, len);
 	    conf->appPasswd[len] = '\0';
-	    printf("ARPDBG password >>%s<<\n", conf->appPasswd);
 	    xmlFree(attrValue);
 	  }
 	}
@@ -133,8 +130,6 @@ int Get_tools_config(char *file,
 	      *(--pChar) = '\0';
 	      strncpy(conf->proxyAddress, buf, REG_MAX_STRING_LENGTH);
 	    }
-	    printf("ARPDBG proxy address and port >>%s:%d<<\n", 
-		   conf->proxyAddress, conf->proxyPort);
 	    xmlFree(attrValue);
 	  }
 	}
@@ -148,7 +143,6 @@ int Get_tools_config(char *file,
 	len = xmlStrlen(attrValue);
 	strncpy(conf->checkPointTree, (char *)attrValue, len);
 	conf->appPasswd[len] = '\0';
-	printf("ARPDBG chk tree >>%s<<\n", conf->checkPointTree);
 	xmlFree(attrValue);
       }
     }
