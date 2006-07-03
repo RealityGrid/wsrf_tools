@@ -21,6 +21,8 @@ The Makefile is set up to use gcc.  If you're using some other compiler
 you'll need to change it.
 
 Type 'make'...
+Type 'make install'... this creates a 'tools.conf' file in ~/.realitygrid. 
+Edit this file to specify the location of the top-level job registry etc.
 
 --------------------------------------------------------------------
 The utilities:
@@ -39,21 +41,40 @@ addUser
 browseRegistry
 
   Usage:
-    browseRegistry <EPR of Registry (ServiceGroup)> [<pattern to filter on>]
+    browseRegistry [--registry=EPR of Registry]  [--pattern=pattern to filter on]
 
-  Browse a specified registry (WSRF ServiceGroup)...
+  Browse a specified registry (WSRF ServiceGroup).  If either argument
+  is not specified, the file ~/.realitygrid/tools.conf will be checked
+  for appropriate values.
+
+---------------------
+createChkTree
+
+  Usage:
+    createChkTree [--factory=address of checkpoint tree factory]
+                  <--label=description of work to be recorded in this tree>
+
+  Creates a new CheckpointTree using the specified factory and with a 
+  label containing the specified descriptive text.  If no factory is specified 
+  then the file ~/.realitygrid/tools.conf will be checked for a valid factory EPR.
 
 ---------------------
 createSWS
 
   Usage:
-    createSWS <address of registry> <lifetime (min)> <application> <purpose> [checkpoint EPR]
+    createSWS [--registry=address of registry] [--lifetime=lifetime (min)]
+              [--appName=name of application] <--purpose=purpose of job> 
+              [--checkpoint=EPR of starting checkpoint if any]
+              [--dataSource=label of source IOType]
+              [--proxy=address:port]
 
   Create a Steering Web Service.  This takes four mandatory arguments
   (address of the 'top level registry', run-time of the job in minutes,
   the name of the application being run and some [quoted] text
   describing its purpose) and one optional argument - the EPR of the node in
-  a checkpoint tree from which the job is being restarted.
+  a checkpoint tree from which the job is being restarted.  If the mandatory
+  arguments are not given on the command line, the file 
+  ~/.realitygrid/tools.conf will be checked for appropriate values.
 
 ---------------------
 createVisSWS
