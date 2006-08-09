@@ -4,7 +4,7 @@ include ${REG_STEER_HOME}/make/Makefile.${ARCH}
 
 INCLUDE_PATH = ${STEER_INCLUDES}
 LIB_FLAGS =  ${STEER_LIBS} -lReG_Steer_Utils \
-            -lReG_Steer ${STEER_LDFLAGS} 
+            -lReG_Steer -lReG_Steer_SOAP ${STEER_LDFLAGS} 
 
 .SUFFIXES: .o .c
 
@@ -17,7 +17,7 @@ ${INCLUDE_PATH} -c $< -o $@
 
 TARGETS = addUser browseRegistry createSWS createVisSWS \
           destroySWS globalParamCreate getResourcePropertyDoc \
-          getResourceProperty createChkTree
+          getResourceProperty createChkTree getResourcePropertyDoc_testing
 
 #          testSteerLib
 
@@ -47,6 +47,9 @@ globalParamCreate: globalParamCreate.o
 
 getResourcePropertyDoc: getResourcePropertyDoc.o
 	${CC} ${C_FLAGS} getResourcePropertyDoc.o ${LIB_FLAGS} -o $@
+
+getResourcePropertyDoc_testing: getResourcePropertyDoc_testing.o
+	${CC} ${C_FLAGS} getResourcePropertyDoc_testing.o ${LIB_FLAGS} -o $@
 
 getResourceProperty: getResourceProperty.o
 	${CC} ${C_FLAGS} getResourceProperty.o ${LIB_FLAGS} -o $@
