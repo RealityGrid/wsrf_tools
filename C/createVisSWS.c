@@ -58,11 +58,13 @@ int main(int argc, char **argv){
   int                      proxyPort, status;
   struct registry_contents content;
   struct reg_job_details   job;
-  struct reg_security_info sec;
+  struct reg_security_info registrySec;
+  struct reg_security_info jobSec;
   struct reg_iotype_list   iotypeList;
   struct tool_conf         conf;
 
-  Wipe_security_info(&sec);
+  Wipe_security_info(&registrySec);
+  Wipe_security_info(&jobSec);
 
   if(argc == 1){
     printUsage();
@@ -155,11 +157,11 @@ int main(int argc, char **argv){
   if(strstr(registryAddr, "https") == registryAddr){
 
     /* Read the location of certs etc. into global variables */
-    if(Get_security_config(NULL, &sec)){
+    if(Get_security_config(NULL, &registrySec)){
       printf("Failed to get security configuration\n");
       return 1;
     }
-    snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", sec.userDN);
+    snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", registrySec.userDN);
 
     /* Now get the user's passphrase for their key */
     if( !(passPtr = getpass("Enter passphrase for key: ")) ){
@@ -167,29 +169,29 @@ int main(int argc, char **argv){
       printf("Failed to get key passphrase from command line\n");
       return 1;
     }
-    strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+    strncpy(registrySec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
   }
   else{
-    sec.use_ssl = 0;
+    registrySec.use_ssl = 0;
     if( !(passPtr = getpass("Enter your username for registry: ")) ){
       printf("Failed to get username from command line\n");
       return 1;
     }
     printf("\n");
-    strncpy(sec.userDN, passPtr, REG_MAX_STRING_LENGTH);    
+    strncpy(registrySec.userDN, passPtr, REG_MAX_STRING_LENGTH);    
     
     if( !(passPtr = getpass("Enter passphrase for registry: ")) ){
       printf("Failed to get registry passphrase from command line\n");
       return 1;
     }
-    strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+    strncpy(registrySec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
   }
   printf("\n");
 
   /* Look for available SWSs and get user to choose which one to
      use as a data source */
   if(Get_registry_entries_filtered_secure(registryAddr,
-					  &sec,  
+					  &registrySec,  
 					  &content,
 					  "SWS") != REG_SUCCESS){
     fprintf(stderr, "\nNo jobs to use as data source found in registry!\n");
@@ -217,17 +219,29 @@ int main(int argc, char **argv){
   strncpy(dataSource, content.entries[count].gsh, REG_MAX_STRING_LENGTH);
   Delete_registry_table(&content);
 
-  /* Ask the user to specify the (WSSE) password for access to 
-     this SWS */
-  if( !(passPtr = getpass("Enter password for this SWS: ")) ){
+  if(strstr(dataSource, "https") == dataSource){
 
-    printf("Failed to get password from command line\n");
-    return 1;
+    /* Read the location of certs etc. into global variables */
+    if(Get_security_config(NULL, &jobSec)){
+      printf("Failed to get security configuration\n");
+      return 1;
+    }
   }
-  strncpy(job.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+  else{
+    /* Ask the user to specify the (WSSE) password for access to 
+       this SWS */
+    if( !(passPtr = getpass("Enter password for this SWS: ")) ){
+
+      printf("Failed to get password from command line\n");
+      return 1;
+    }
+    strncpy(jobSec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+    strncpy(job.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+    strncpy(jobSec.userDN, getenv("USER"), REG_MAX_STRING_LENGTH);    
+  }
 
   /* Obtain the IOTypes from the data source */
-  Get_IOTypes(dataSource, &sec, &iotypeList);
+  Get_IOTypes(dataSource, &jobSec, &iotypeList);
 
   if( iotypeList.numEntries < 1 ){
     fprintf(stderr, "Got no IOType definitions from data source\n");
@@ -266,7 +280,7 @@ int main(int argc, char **argv){
   /* Get the list of available Containers and ask the user to 
      choose one */
   if(Get_registry_entries_filtered_secure(registryAddr, 
-					  &sec,
+					  &registrySec,
 					  &content, 
 					  "Container registry") != REG_SUCCESS){
     fprintf(stderr, 
@@ -284,7 +298,7 @@ int main(int argc, char **argv){
   Delete_registry_table(&content);
 
   if(Get_registry_entries_filtered_secure(containerAddr,
- 					  &sec,
+ 					  &registrySec,
 					  &content, "Container") != REG_SUCCESS){
     fprintf(stderr, "Search for available containers failed\n");
     return 1;
@@ -312,7 +326,7 @@ int main(int argc, char **argv){
 
   /* Now create SWS for the vis */
   if( !(EPR = Create_steering_service(&job, containerAddr, 
-				      registryAddr, &sec)) ){
+				      registryAddr, &registrySec)) ){
     printf("FAILED to create SWS for %s :-(\n", job.software);
     return 1;
   }
@@ -322,18 +336,18 @@ int main(int argc, char **argv){
   if(proxyAddress[0] == '\0'){
     /* No proxy being used */
     status = Set_service_data_source(EPR, dataSource, 0, 
-				     iodef_label, &sec);
+				     iodef_label, &jobSec);
   }
   else{
     status = Set_service_data_source(EPR, proxyAddress, proxyPort, 
-				     iodef_label, &sec);
+				     iodef_label, &jobSec);
   }
 
   if(status != REG_SUCCESS){
 
     fprintf(stderr, "Failed to initialize SWS with info. on data source :-(");
 
-    if(Destroy_WSRP(EPR, &sec) == REG_SUCCESS){
+    if(Destroy_WSRP(EPR, &jobSec) == REG_SUCCESS){
       fprintf(stderr, "  => Destroyed %s\n", EPR);
     }
     else{
