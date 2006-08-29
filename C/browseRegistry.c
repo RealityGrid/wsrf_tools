@@ -149,6 +149,7 @@ int main(int argc, char **argv){
   }
 
   printf("\n");
+  printf("Entries found in %s:\n\n", registryEPR);
   for(i=0; i<content.numEntries; i++){
     printf("Entry %d - type: %s\n", i, content.entries[i].service_type);
     printf("           EPR: %s\n", content.entries[i].gsh);
