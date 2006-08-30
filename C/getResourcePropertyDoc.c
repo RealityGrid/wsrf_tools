@@ -80,7 +80,7 @@ int main(int argc, char **argv){
 
   if( !(passPtr = getpass("Enter SWS password: ")) ){
 
-    printf("Failed to get SWS password from command line\n");
+    fprintf(stderr, "Failed to get SWS password from command line\n");
     return 1;
   }
 
@@ -90,7 +90,7 @@ int main(int argc, char **argv){
 			    passPtr,
 			    &rpDoc);
 	 
-  fprintf(stdout, "Resource property document:\n>>%s<<\n", rpDoc);
+  fprintf(stdout, "\n\n%s\n\n", rpDoc);
 
   /* Explicitly wipe the passphrase from memory */
   memset((void *)(input), '\0', MAX_LEN);

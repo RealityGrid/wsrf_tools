@@ -175,12 +175,13 @@ int main(int argc, char **argv){
     snprintf(job.userName, REG_MAX_STRING_LENGTH, "%s", sec.userDN);
 
     /* Now get the user's passphrase for their key */
-    if( !(pChar = getpass("Enter passphrase for key: ")) ){
+    if( !(pChar = getpass("Enter passphrase for your e-Science key: ")) ){
 
       printf("Failed to get key passphrase from command line\n");
       return 1;
     }
     strncpy(sec.passphrase, pChar, REG_MAX_STRING_LENGTH);
+    printf("\n");
   }
   else{
     /* Registry is not using SSL... */
@@ -257,12 +258,11 @@ int main(int argc, char **argv){
 
   EPR = Create_steering_service(&job, containerAddr,
 				registryAddr, &sec);
-  if(EPR){
-    printf("\nAddress of SWS = %s\n", EPR);
-  }
-  else{
+  if(!EPR){
     printf("\nFAILED to create SWS :-(\n");
+    return 1;
   }
+  printf("\nAddress of SWS = %s\n\n", EPR);
 
   /* Finally, set it up with information on the data proxy if
      required */
