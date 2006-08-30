@@ -57,14 +57,15 @@ int Get_tools_config(char *file,
 
   doc = xmlParseFile(buf);
   if( !(cur = xmlDocGetRootElement(doc)) ){
-    printf("Error parsing xml from %s: empty document\n", buf);
+    fprintf(stderr, "Get_tools_config: error parsing xml from %s: "
+	    "empty document\n", buf);
     xmlFreeDoc(doc);
     xmlCleanupParser();
     return REG_FAILURE;
   }
   if (xmlStrcmp(cur->name, (const xmlChar *) "ReGToolsConfig")){
-    printf("Error parsing xml from tools.conf: root element "
-           "is not 'ReGToolsConfig'\n");
+    fprintf(stderr, "Get_tools_config: error parsing xml from "
+	    "tools.conf: root element is not 'ReGToolsConfig'\n");
     return REG_FAILURE;
   }
   cur = cur->xmlChildrenNode;
@@ -91,7 +92,7 @@ int Get_tools_config(char *file,
 	    len = xmlStrlen(attrValue);
 	    strncpy(conf->registryEPR, (char *)attrValue, len);
 	    conf->registryEPR[len] = '\0';
-	    printf("registryEPR >>%s<<\n", conf->registryEPR);
+	    /*printf("registryEPR >>%s<<\n", conf->registryEPR);*/
 	    xmlFree(attrValue);
 	  }
 	}
@@ -101,7 +102,7 @@ int Get_tools_config(char *file,
 	    len = xmlStrlen(attrValue);
 	    strncpy(conf->filterPattern, (char *)attrValue, len);
 	    conf->filterPattern[len] = '\0';
-	    printf("filterPattern >>%s<<\n", conf->filterPattern);
+	    /*printf("filterPattern >>%s<<\n", conf->filterPattern);*/
 	    xmlFree(attrValue);
 	  }
 	}
@@ -178,6 +179,8 @@ int Get_tools_config(char *file,
 
   return REG_SUCCESS;
 }
+
+/*-----------------------------------------------------------------*/
 
 int Update_tools_config(char *file,
 			struct tool_conf *conf){
