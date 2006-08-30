@@ -1,7 +1,7 @@
 The directory containing this README should contain the source code for
 a number of utilities for use with the WSRF-based version of the
 RealityGrid steering library (www.realitygrid.org and 
-www.sve.man.ac.uk/Research/AtoZ/RealityGrid/).
+http://www.mc.manchester.ac.uk/research/projects/realitygrid).
 
 --------------------------------------------------------------------
 To build:
@@ -17,8 +17,8 @@ and in (t)csh:
 	setenv REG_STEER_HOME ${HOME}/reg_steer_lib
 .)
 
-The Makefile is set up to use gcc.  If you're using some other compiler
-you'll need to change it.
+The Makefile is currently set up to use gcc.  If you're using some 
+other compiler you'll need to change it.
 
 Type 'make'...
 Type 'make install'... this creates a 'tools.conf' file in ~/.realitygrid. 
@@ -63,7 +63,7 @@ createSWS
 
   Usage:
     createSWS [--registry=address of registry] [--lifetime=lifetime (min)]
-              [--appName=name of application] <--purpose=purpose of job> 
+              [--appName=name of application] [--purpose=purpose of job] 
               [--checkpoint=EPR of starting checkpoint if any]
               [--dataSource=label of source IOType]
               [--proxy=address:port]
@@ -71,9 +71,16 @@ createSWS
   Create a Steering Web Service.  This takes four mandatory arguments
   (address of the 'top level registry', run-time of the job in minutes,
   the name of the application being run and some [quoted] text
-  describing its purpose) and one optional argument - the EPR of the node in
-  a checkpoint tree from which the job is being restarted.  If the mandatory
-  arguments are not given on the command line, the file 
+  describing its purpose) and three optional arguments. The first of these
+  is the EPR of a node in a checkpoint tree from which the job is being 
+  restarted. The second and third are only applicable when an ioProxy is being
+  used for data IO (as opposed to files or direct socket connections). If the 
+  application is to emit data via an ioProxy then it must be given the location
+  of the proxy via the --proxy option.  If it is to consume data via a proxy
+  then, in addition to this, the label of the data source must be specified
+  using the --dataSource option. 
+
+  If the mandatory arguments are not given on the command line, the file 
   ~/.realitygrid/tools.conf will be checked for appropriate values.
 
 ---------------------
