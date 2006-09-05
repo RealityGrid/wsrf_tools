@@ -64,12 +64,16 @@ createReGFramework.pl <EPR of container> [passphrase]
 --------------------- 
 This script sets up the registries used by the steering system.  Once
 you have a WSRF::Lite container up and running then executing this
-script is your next step.  It's one mandatory argument specifies the
+script is your next step.  Its one mandatory argument specifies the
 address of the container (e.g. http://localhost:50000/) in which to
 create the registries.  A passphrase to protect access to the new
 registries can be specified if desired. (Note that this passphrase
 will be passed over the network in clear text during this
 configuration phase unless the chosen container is using SSL.)
+This script reads a list of avalailable containers from the 
+container_addresses.txt file and a list of available ioProxies from the 
+ioproxy_addresses.txt file.  Therefore you will probably want to edit
+these before running the script.
 
 createRegistry.pl <EPR of container> [passphrase]
 -----------------
