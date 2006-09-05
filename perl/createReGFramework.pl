@@ -5,10 +5,47 @@ BEGIN {
 };
 
 use strict;
-use SOAP::Lite +trace =>  debug => sub {};
-#use SOAP::Lite;
-use WSRF::Lite +trace => debug => sub{};
+#use SOAP::Lite +trace =>  debug => sub {};
+use SOAP::Lite;
+#use WSRF::Lite +trace => debug => sub{};
+use WSRF::Lite;
 use ReG_Utils;
+
+#------------------------------------------------------------
+sub createEntryData {
+
+    my ($addr, $now, $DN, $group, $serviceType, $soft, $descr, $passwd) = @_;
+
+    my $StuffToAdd = <<EOF;
+<MemberEPR>
+<wsa:EndpointReference xmlns:wsa="http://www.w3.org/2005/03/addressing">
+<wsa:Address>$addr</wsa:Address>
+</wsa:EndpointReference>
+</MemberEPR>
+<Content>
+<registryEntry>
+<serviceType>$serviceType</serviceType>
+<componentContent>
+<componentStartDateTime>$now</componentStartDateTime>
+<componentCreatorName>$DN</componentCreatorName>
+<componentCreatorGroup>$group</componentCreatorGroup>
+<componentSoftwarePackage>$soft</componentSoftwarePackage>
+<componentTaskDescription>$descr</componentTaskDescription>
+</componentContent>
+<regSecurity>
+<passphrase>$passwd</passphrase>
+<allowedUsers>
+<user>ANY</user>
+</allowedUsers>
+</regSecurity>
+</registryEntry>
+</Content>
+EOF
+
+    return $StuffToAdd;
+}
+
+#------------------------------------------------------------
 
 #need to point to users certificates - these are only used
 #if https protocal is being used.
@@ -30,13 +67,13 @@ if(@ARGV == 2){
     $containerPassphrase = $ARGV[1];
 }
 
-#------------------------------------
-#Create registry for containers
+#---------------------------------------------------------
+#Create registry for containers and registry for ioProxies
 $topContainer =~ s/\/$//o;
 my $target = $topContainer."/Session/regServiceGroup/regServiceGroup";
 my $uri = "http://www.sve.man.ac.uk/regServiceGroup";
 
-my $ans=  SOAP::Lite
+my $ans =  SOAP::Lite
          -> uri($uri)
          -> on_action( sub {sprintf '%s/%s', @_} ) #override the default SOAPAction to use a '/' instead of a '#'
          -> proxy("$target")                       #location of service
@@ -49,9 +86,25 @@ if ($ans->fault) {
 
 #Check we that got a WS-Address EndPoint back
 my $containerRegistryAddress = $ans->valueof('//Address') or
-       die "CREATE ERROR:: No Endpoint returned\n";
+       die "CREATE ERROR:: No Endpoint returned for container registry\n";
+
+$ans =  SOAP::Lite
+         -> uri($uri)
+         -> on_action( sub {sprintf '%s/%s', @_} ) #override the default SOAPAction to use a '/' instead of a '#'
+         -> proxy("$target")                       #location of service
+         -> createServiceGroup($containerPassphrase);
+
+if ($ans->fault) {  
+    die "CREATE ERROR:: ".$ans->faultcode." ".$ans->faultstring.
+	" ".$ans->faultdetail."\n"; 
+}
+
+#Check we that got a WS-Address EndPoint back
+my $ioProxyRegistryAddress = $ans->valueof('//Address') or
+       die "CREATE ERROR:: No Endpoint returned for ioProxy registry\n";
 
 print "EndPoint of container registry = $containerRegistryAddress\n";
+print "EndPoint of  ioProxy  registry = $ioProxyRegistryAddress\n";
 print "\n";
 
 #------------------------------------
@@ -85,42 +138,26 @@ if(defined $ENV{HTTPS_CERT_FILE} && open(CERT_FILE, $ENV{HTTPS_CERT_FILE})){
     print "Your DN = $DN\n";
 }
 
+# Read in the lists of containers and ioProxies to register
 open(CONTAINER_FILE, "container_addresses.txt") || die("can't open container list: $!");
 my @containers = <CONTAINER_FILE>;
 close(CONTAINER_FILE);
 
+open(IOPROXY_FILE, "ioproxy_addresses.txt") || die("can't open ioProxy list: $!");
+my @proxies = <IOPROXY_FILE>;
+close(IOPROXY_FILE);
+
 foreach my $container (@containers){
     chomp($container);
 
-    my $StuffToAdd = <<EOF;
-<MemberEPR>
-<wsa:EndpointReference xmlns:wsa="http://www.w3.org/2005/03/addressing">
-<wsa:Address>$container</wsa:Address>
-</wsa:EndpointReference>
-</MemberEPR>
-<Content>
-<registryEntry>
-<serviceType>Container</serviceType>
-<componentContent>
-<componentStartDateTime>$time_now</componentStartDateTime>
-<componentCreatorName>$DN</componentCreatorName>
-<componentCreatorGroup>RSS</componentCreatorGroup>
-<componentSoftwarePackage>WSRF::Lite Container</componentSoftwarePackage>
-<componentTaskDescription>Hosting environment for WS resources</componentTaskDescription>
-</componentContent>
-<regSecurity>
-<passphrase>$containerPassphrase</passphrase>
-<allowedUsers>
-<user>ANY</user>
-</allowedUsers>
-</regSecurity>
-</registryEntry>
-</Content>
-EOF
+    my $StuffToAdd = createEntryData($container, $time_now, $DN,
+                                     "RSS", "Container",
+				     "WSRF::Lite Container",
+				     "Hosting environment for WS resources", 
+				     $containerPassphrase);
 
-    my $ans;
     if(index($containerRegistryAddress, "https://") == -1){
-        # Make sure we use WSSE if not using SSL
+	# Make sure we use WSSE if not using SSL
 	my $hdr = ReG_Utils::makeWSSEHeader($DN, $containerPassphrase);
 	$ans = WSRF::Lite
 	    -> uri($uri)
@@ -134,10 +171,40 @@ EOF
 	    -> wsaddress(WSRF::WS_Address->new()->Address($containerRegistryAddress))
 	    -> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
     }
+
     #Check we got a WS-Address EndPoint back
     die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
-       
-}
+    
+} # End of loop over containers
+
+foreach my $proxy (@proxies){
+    chomp($proxy);
+
+    my $StuffToAdd = createEntryData($proxy, $time_now, $DN, "RSS",
+				     "ioProxy", "ReG ioProxy",
+				     "Proxy for mediating socket connections", 
+				     $containerPassphrase);
+
+    if(index($ioProxyRegistryAddress, "https://") == -1){
+	# Make sure we use WSSE if not using SSL
+	my $hdr = ReG_Utils::makeWSSEHeader($DN, $containerPassphrase);
+	$ans = WSRF::Lite
+	    -> uri($uri)
+	    -> wsaddress(WSRF::WS_Address->new()->Address($ioProxyRegistryAddress))
+	    -> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
+		   SOAP::Data->value($StuffToAdd)->type('xml'));  
+    }
+    else{
+	$ans = WSRF::Lite
+	    -> uri($uri)
+	    -> wsaddress(WSRF::WS_Address->new()->Address($ioProxyRegistryAddress))
+	    -> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
+    }
+
+    #Check we got a WS-Address EndPoint back
+    die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
+
+} # End of loop over ioProxies
 
 #------------------------------------
 #Create top-level registry
@@ -157,7 +224,7 @@ if ($ans->fault) {
 
 #Check we that got a WS-Address EndPoint back
 my $topLevelRegistryAddress = $ans->valueof('//Address') or
-       die "CREATE ERROR:: No Endpoint returned\n";
+       die "CREATE ERROR:: No Endpoint returned for top-level registry\n";
 
 print "EndPoint of top-level registry = $topLevelRegistryAddress\n";
 print "\n";
@@ -165,47 +232,55 @@ print "\n";
 #------------------------------------
 #Register container registry with top-level registry
 
-my $StuffToAdd = <<EOF;
-<MemberEPR>
-<wsa:EndpointReference xmlns:wsa="http://www.w3.org/2005/03/addressing">
-<wsa:Address>$containerRegistryAddress</wsa:Address>
-</wsa:EndpointReference>
-</MemberEPR>
-<Content>
-<registryEntry>
-<serviceType>ServiceGroup</serviceType>
-<componentContent>
-<componentStartDateTime>$time_now</componentStartDateTime>
-<componentCreatorName>$DN</componentCreatorName>
-<componentCreatorGroup>RSS</componentCreatorGroup>
-<componentSoftwarePackage>none</componentSoftwarePackage>
-<componentTaskDescription>Container registry</componentTaskDescription>
-</componentContent>
-<regSecurity>
-<passphrase>$containerPassphrase</passphrase>
-<allowedUsers>
-<user>ANY</user>
-</allowedUsers>
-</regSecurity>
-</registryEntry>
-</Content>
-EOF
+my $StuffToAdd = createEntryData($containerRegistryAddress, $time_now, 
+				 $DN, "RSS",
+				 "ServiceGroup", "none",
+				 "Container registry", 
+				 $containerPassphrase);
 
-    if(index($containerRegistryAddress, "https://") == -1){
-        # Make sure we use WSSE if not using SSL
-	my $hdr = ReG_Utils::makeWSSEHeader($DN, $containerPassphrase);
-	$ans = WSRF::Lite
-	    -> uri($uri)
-	    -> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
-	    -> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
-		   SOAP::Data->value($StuffToAdd)->type('xml'));  
-    }
-    else{
-	$ans = WSRF::Lite
-	    -> uri($uri)
-	    -> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
-	    -> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
-    }
+if(index($topLevelRegistryAddress, "https://") == -1){
+    # Make sure we use WSSE if not using SSL
+    my $hdr = ReG_Utils::makeWSSEHeader($DN, $containerPassphrase);
+    $ans = WSRF::Lite
+	-> uri($uri)
+	-> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
+	-> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
+	       SOAP::Data->value($StuffToAdd)->type('xml'));  
+}
+else{
+    $ans = WSRF::Lite
+	-> uri($uri)
+	-> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
+	-> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
+}
+
+#Check we got a WS-Address EndPoint back
+die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
+
+#------------------------------------
+#Register ioProxy registry with top-level registry
+
+my $StuffToAdd = createEntryData($ioProxyRegistryAddress, $time_now, 
+				 $DN, "RSS",
+				 "ServiceGroup", "none",
+				 "ioProxy registry", 
+				 $containerPassphrase);
+
+if(index($topLevelRegistryAddress, "https://") == -1){
+    # Make sure we use WSSE if not using SSL
+    my $hdr = ReG_Utils::makeWSSEHeader($DN, $containerPassphrase);
+    $ans = WSRF::Lite
+	-> uri($uri)
+	-> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
+	-> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
+	       SOAP::Data->value($StuffToAdd)->type('xml'));  
+}
+else{
+    $ans = WSRF::Lite
+	-> uri($uri)
+	-> wsaddress(WSRF::WS_Address->new()->Address($topLevelRegistryAddress))
+	-> Add(SOAP::Data->value($StuffToAdd)->type('xml'));  
+}
 
 #Check we got a WS-Address EndPoint back
 die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
