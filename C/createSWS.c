@@ -165,7 +165,7 @@ int main(int argc, char **argv){
 
   if(strstr(registryAddr, "https") == registryAddr){
 
-    sec.use_ssl = 1;
+    sec.use_ssl = REG_TRUE;
 
     /* Read the location of certs etc. into global variables */
     if(Get_security_config(NULL, &sec) != REG_SUCCESS){
@@ -184,8 +184,9 @@ int main(int argc, char **argv){
     printf("\n");
   }
   else{
+
     /* Registry is not using SSL... */
-    sec.use_ssl = 0;
+    sec.use_ssl = REG_FALSE;
 
     snprintf(buf, 1024, "Enter your username for registry [%s]: ", 
 	     getenv("USER"));

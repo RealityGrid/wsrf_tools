@@ -156,6 +156,8 @@ int main(int argc, char **argv){
 
   if(strstr(registryAddr, "https") == registryAddr){
 
+    registrySec.use_ssl = REG_TRUE;
+
     /* Read the location of certs etc. into global variables */
     if(Get_security_config(NULL, &registrySec)){
       printf("Failed to get security configuration\n");
@@ -172,7 +174,8 @@ int main(int argc, char **argv){
     strncpy(registrySec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
   }
   else{
-    registrySec.use_ssl = 0;
+    registrySec.use_ssl = REG_FALSE;
+
     if( !(passPtr = getpass("Enter your username for registry: ")) ){
       printf("Failed to get username from command line\n");
       return 1;

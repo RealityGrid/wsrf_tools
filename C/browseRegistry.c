@@ -104,7 +104,7 @@ int main(int argc, char **argv){
     }
     printf("\n");
     strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
-
+    sec.use_ssl = REG_TRUE;
   }
   else{
 
@@ -128,6 +128,7 @@ int main(int argc, char **argv){
       return 1;
     }
     strncpy(sec.passphrase, passPtr, REG_MAX_STRING_LENGTH);
+    sec.use_ssl = REG_FALSE;
   }
 
   /* Finally, we can contact the registry */
