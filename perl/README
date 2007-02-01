@@ -15,6 +15,10 @@ The majority of the scripts require that WSRF::Lite (available from
 http://www.sve.man.ac.uk/Research/AtoZ/ILCT) and its associated
 dependencies be installed.  See the WSRF::Lite README for details.
 
+You need to set this environment variable first:
+
+export WSRF_LOCATION=/path/to/WSRF-Lite
+
 The Scripts
 -----------
 
