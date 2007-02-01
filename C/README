@@ -24,6 +24,13 @@ Type 'make'...
 Type 'make install'... this creates a 'tools.conf' file in ~/.realitygrid. 
 Edit this file to specify the location of the top-level job registry etc.
 
+-------------------------------------------------------------------
+Certificates:
+
+gsoap requires that you combine your usercert.pem and userkey.pem
+into usercertandkey.pem (just cat them together, any order). All
+need to be in your ~/.globus directory.
+
 --------------------------------------------------------------------
 The utilities:
 
