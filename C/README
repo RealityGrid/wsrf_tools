@@ -1,0 +1,142 @@
+The directory containing this README should contain the source code for
+a number of utilities for use with the WSRF-based version of the
+RealityGrid steering library (www.realitygrid.org and 
+http://www.mc.manchester.ac.uk/research/projects/realitygrid).
+
+--------------------------------------------------------------------
+To build:
+
+You'll need the RealityGrid steering library installed somewhere
+on your machine.
+
+Ensure that the REG_STEER_HOME environment variable holds the path to the
+steering library, e.g. ${HOME}/reg_steer_lib.
+(In bash:
+	export REG_STEER_HOME=${HOME}/reg_steer_lib 
+and in (t)csh:
+	setenv REG_STEER_HOME ${HOME}/reg_steer_lib
+.)
+
+The Makefile is currently set up to use gcc.  If you're using some 
+other compiler you'll need to change it.
+
+Type 'make'...
+Type 'make install'... this creates a 'tools.conf' file in ~/.realitygrid. 
+Edit this file to specify the location of the top-level job registry etc.
+
+-------------------------------------------------------------------
+Certificates:
+
+gsoap requires that you combine your usercert.pem and userkey.pem
+into usercertandkey.pem (just cat them together, any order). All
+need to be in your ~/.globus directory.
+
+--------------------------------------------------------------------
+The utilities:
+
+---------------------
+addUser
+
+  Usage:
+    addUser <address of SWS> <passphrase> <username to add>
+
+  Allow another user access to the specified SWS.  The passphrase
+  securing the SWS must be specified, along with the username of the
+  new user.
+
+---------------------
+browseRegistry
+
+  Usage:
+    browseRegistry [--registry=EPR of Registry]  [--pattern=pattern to filter on]
+
+  Browse a specified registry (WSRF ServiceGroup).  If either argument
+  is not specified, the file ~/.realitygrid/tools.conf will be checked
+  for appropriate values.
+
+---------------------
+createChkTree
+
+  Usage:
+    createChkTree [--factory=address of checkpoint tree factory]
+                  <--label=description of work to be recorded in this tree>
+
+  Creates a new CheckpointTree using the specified factory and with a 
+  label containing the specified descriptive text.  If no factory is specified 
+  then the file ~/.realitygrid/tools.conf will be checked for a valid factory EPR.
+
+---------------------
+createSWS
+
+  Usage:
+    createSWS [--registry=address of registry] [--lifetime=lifetime (min)]
+              [--appName=name of application] [--purpose=purpose of job] 
+              [--checkpoint=EPR of starting checkpoint if any]
+              [--dataSource=label of source IOType]
+              [--proxy=address:port]
+
+  Create a Steering Web Service.  This takes four mandatory arguments
+  (address of the 'top level registry', run-time of the job in minutes,
+  the name of the application being run and some [quoted] text
+  describing its purpose) and three optional arguments. The first of these
+  is the EPR of a node in a checkpoint tree from which the job is being 
+  restarted. The second and third are only applicable when an ioProxy is being
+  used for data IO (as opposed to files or direct socket connections). If the 
+  application is to emit data via an ioProxy then it must be given the location
+  of the proxy via the --proxy option.  If it is to consume data via a proxy
+  then, in addition to this, the label of the data source must be specified
+  using the --dataSource option. 
+
+  If the mandatory arguments are not given on the command line, the file 
+  ~/.realitygrid/tools.conf will be checked for appropriate values.
+
+---------------------
+createVisSWS
+
+  As for createSWS but for use when the associated app. is a visualization
+  and thus must be supplied with a data source.  The simulation that will
+  act as a data source must be up and running before using this utility.
+
+---------------------
+destroySWS
+
+  Usage:
+    destroySWS <EPR of SWS 1> [<EPR of SWS 2>...]
+
+  Destroys one or more specified SWSs.
+
+---------------------
+getResourceProperty
+
+  Usage:
+    getResourceProperty <EPR of SWS> <name of ResourceProperty>
+
+  Retrieves the value of the specified ResourceProperty from the SWS at the
+  specified address.
+
+---------------------
+getResourcePropertyDoc
+
+  Usage:
+    getResourcePropertyDoc <EPR of SWS>
+
+  Retrieves the complete ResourceProperties document from the SWS at the
+  specified address.
+
+---------------------
+globalParamCreate
+
+  Usage: 
+    globalParamCreate <EPR of parent>
+
+  Use to create 'global' steered parameters for a steered couple model.  
+  Takes a single argument consisting of the EPR of the parent SWS representing
+  the complete coupled model.  This SWS is interrogated to get the EPRs of
+  its children and its parameter defintions.  These parameters are
+  then displayed to the user who can choose which to link together in order 
+  to create a 'global' parameter.  Once done, the definitions of the global 
+  parameters are passed back to the parent EPR.
+
+  N.B. This requires that the parent SWS have the parameter definitions from
+  all of its children which in turn requires that all the children be up
+  and running before this tool is used. 
