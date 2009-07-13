@@ -1,0 +1,5 @@
+This repository is a merge of two CVS modules:
+ * reg_wsrf_scripts (perl)
+ * reg_wsrf_tools (C)
+
+Robert Haines, 13th July 2009.
