@@ -1,0 +1,9 @@
+# ignore emacs generated ~
+*~
+
+# ignore generated files
+perl/container_addresses.txt
+perl/ioproxy_addresses.txt
+perl/reg_app_info.sh
+perl/reg_registry_info.sh
+perl/reg_viz_info.sh
