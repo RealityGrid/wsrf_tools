@@ -18,7 +18,7 @@ sub createEntryData {
 
     my $StuffToAdd = <<EOF;
 <MemberEPR>
-<wsa:EndpointReference xmlns:wsa="http://www.w3.org/2005/03/addressing">
+<wsa:EndpointReference xmlns:wsa="$WSRF::Constants::WSA">
 <wsa:Address>$addr</wsa:Address>
 </wsa:EndpointReference>
 </MemberEPR>
@@ -111,7 +111,7 @@ print "\n";
 #Add containers to container registry
 
 #the Add operation belongs to this namespace
-$uri = "http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup";
+$uri = $WSRF::Constants::WSSG;
 
 # Get the time and date
 my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
@@ -173,7 +173,7 @@ foreach my $container (@containers){
     }
 
     #Check we got a WS-Address EndPoint back
-    die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
+    die "Add ERROR:: No Endpoint returned (container)\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
     
 } # End of loop over containers
 
@@ -186,7 +186,7 @@ foreach my $proxy (@proxies){
 				     $containerPassphrase);
 
     if(index($ioProxyRegistryAddress, "https://") == -1){
-	# Make sure we use WSSE if not using SSL
+        # Make sure we use WSSE if not using SSL
 	my $hdr = ReG_Utils::makeWSSEHeader($DN, $containerPassphrase);
 	$ans = WSRF::Lite
 	    -> uri($uri)
@@ -202,7 +202,7 @@ foreach my $proxy (@proxies){
     }
 
     #Check we got a WS-Address EndPoint back
-    die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
+    die "Add ERROR:: No Endpoint returned (ioProxy)\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
 
 } # End of loop over ioProxies
 
@@ -255,7 +255,7 @@ else{
 }
 
 #Check we got a WS-Address EndPoint back
-die "Add ERROR:: No Endpoint returned\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
+die "Add ERROR:: No Endpoint returned (top-level)\n" unless ($ans->match('//AddResponse/EndpointReference/Address'));
 
 #------------------------------------
 #Register ioProxy registry with top-level registry

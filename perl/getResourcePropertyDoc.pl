@@ -4,8 +4,8 @@ BEGIN {
        @INC = ( @INC, $ENV{WSRF_LOCATION} );
 };
 
-use WSRF::Lite +trace =>  debug => sub {};
-#use WSRF::Lite;
+#use WSRF::Lite +trace =>  debug => sub {};
+use WSRF::Lite;
 use ReG_Utils;
 use strict;
 

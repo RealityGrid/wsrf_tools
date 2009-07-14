@@ -5,8 +5,10 @@ BEGIN {
        @INC = ( @INC, $ENV{WSRF_LOCATION} );
 };
 
-use SOAP::Lite +trace =>  debug => sub {};
-use WSRF::Lite +trace =>  debug => sub {};
+#use SOAP::Lite +trace =>  debug => sub {};
+#use WSRF::Lite +trace =>  debug => sub {};
+use SOAP::Lite;
+use WSRF::Lite;
 use ReG_Utils;
 use strict;
 
@@ -36,7 +38,7 @@ if ( @ARGV != 3)
 my ($target, $container, $passphrase) = @ARGV;
 
 #the Add operation belongs to this namespace
-my $uri = "http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup";
+my $uri = $WSRF::Constants::WSSG;
 
 my $DN = ReG_Utils::getUsername();
 
@@ -57,7 +59,7 @@ my $time_now = sprintf "%4d-%02d-%02dT%02d:%02d:%02dZ",
 #(In this example we do not set a lifetime for the entry) 
  my $StuffToAdd = <<EOF;
 <MemberEPR>
-<wsa:EndpointReference xmlns:wsa="http://www.w3.org/2005/03/addressing">
+<wsa:EndpointReference xmlns:wsa="$WSRF::Constants::WSA">
 <wsa:Address>$container</wsa:Address>
 </wsa:EndpointReference>
 </MemberEPR>

@@ -4,10 +4,10 @@ BEGIN {
        @INC = ( @INC, $ENV{WSRF_LOCATION} );
 };
 
-use SOAP::Lite +trace =>  debug => sub {};
-#use SOAP::Lite;
-use WSRF::Lite +trace =>  debug => sub {};
-#use WSRF::Lite;
+#use SOAP::Lite +trace =>  debug => sub {};
+use SOAP::Lite;
+#use WSRF::Lite +trace =>  debug => sub {};
+use WSRF::Lite;
 use ReG_Utils;
 use strict;
 
@@ -31,7 +31,7 @@ my $target = shift @ARGV;
 my $passwd = shift @ARGV;
 
 # set the namespace of the service - belongs to WSRP
-my $uri = 'http://www.ibm.com/xmlns/stdwip/web-services/WS-ResourceProperties';
+my $uri = $WSRF::Constants::WSRP;
 
 # set the property name to retrieve
 my $param = "Entry";
@@ -65,7 +65,7 @@ if(!defined($ans->valueof("//"))) {
 
 print "\n";
 
-my $prop_name = "{http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup}Content";
+my $prop_name = "{$WSRF::Constants::WSSG}Content";
 my @serviceTypes = ();
 my @entryContent = ();
 my @userNames = ();

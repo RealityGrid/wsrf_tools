@@ -73,14 +73,14 @@ if(index($registry_EPR, "https://") == -1){
     # Make sure we use WSSE if not using SSL
     my $hdr = ReG_Utils::makeWSSEHeader($DN, $registry_passphrase);
     $ans = WSRF::Lite
-	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> uri($WSRF::Constants::WSSG)
 	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
 	-> GetResourceProperty(SOAP::Header->name('wsse:Security')->value(\$hdr),
 			       SOAP::Data->value("Entry")->type('xml') ); 
 }
 else{
     $ans =  WSRF::Lite
-	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> uri($WSRF::Constants::WSSG)
 	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
 	-> GetResourceProperty( SOAP::Data->value("Entry")->type('xml') ); 
 }
@@ -296,14 +296,14 @@ if(index($registry_EPR, "https://") == -1){
     # Make sure we use WSSE if not using SSL
     my $hdr = ReG_Utils::makeWSSEHeader($DN, $registry_passphrase);
     $ans =  WSRF::Lite
-	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> uri($WSRF::Constants::WSSG)
 	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
 	-> Add(SOAP::Header->name('wsse:Security')->value(\$hdr),
 	       SOAP::Data->value($content)->type('xml')); 
 }
 else{
     $ans =  WSRF::Lite
-	-> uri("http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup")
+	-> uri($WSRF::Constants::WSSG)
 	-> wsaddress(WSRF::WS_Address->new()->Address($registry_EPR))
 	-> Add(SOAP::Data->value($content)->type('xml')); 
 }

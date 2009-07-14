@@ -13,8 +13,10 @@ BEGIN {
 # code in this script rather thab try and take if of the 
 # command line.
 #
-use SOAP::Lite +trace =>  debug => sub {};
-use WSRF::Lite +trace =>  debug => sub {};
+#use SOAP::Lite +trace =>  debug => sub {};
+#use WSRF::Lite +trace =>  debug => sub {};
+use SOAP::Lite;
+use WSRF::Lite;
 
 #need to point to users certificates - these are only used
 #if https protocal is being used.
@@ -41,7 +43,7 @@ my $target = shift @ARGV;
 my $id = shift @ARGV;
 
 #the Add operation belongs to this namespace
-my $uri = "http://www.ibm.com/xmlns/stdwip/web-services/WS-ServiceGroup";
+my $uri = $WSRF::Constants::WSSG;
 
 # operation name to be called
 my $func = "Add";
@@ -54,7 +56,7 @@ my $func = "Add";
 #a time for how long the Service should stay registered for.
 #(In this example we do not set a lifetime for the entry) 
 my $StuffToAdd = '<MemberEPR>
-                    <wsa:EndpointReference xmlns:wsa="http://schemas.xmlsoap.org/ws/2003/03/addressing">
+                    <wsa:EndpointReference xmlns:wsa="$WSRF::Constants::WSA">
                       <wsa:Address>'.$id.'</wsa:Address>
 		    </wsa:EndpointReference>
 		  </MemberEPR>
