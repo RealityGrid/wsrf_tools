@@ -25,16 +25,8 @@
   DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
   CORRECTION.
 ---------------------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "ReG_Steer_types.h"
-#include "ReG_Steer_Browser.h"
-#include "ReG_Steer_Steerside_WSRF.h"
-#include "ReG_Steer_Utils.h"
-#include <unistd.h>
-#include "signal.h"
-#include "configFileParser.h"
+
+#include "ReG_Steer_Tools.h"
 
 /*------------------------------------------------------------*/
 
@@ -84,7 +76,7 @@ int main(int argc, char **argv){
     }
   }
 
-  if(Get_tools_config(NULL, &conf) != REG_SUCCESS){
+  if(get_tools_config(NULL, &conf) != REG_SUCCESS){
     printf("WARNING: Failed to read tools.conf config. file\n");
   }
 

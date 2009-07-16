@@ -25,16 +25,8 @@
   DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
   CORRECTION.
 ---------------------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "ReG_Steer_types.h"
-#include "ReG_Steer_Browser.h"
-#include "ReG_Steer_Steerside_WSRF.h"
-#include "ReG_Steer_Utils.h"
-#include <unistd.h>
-#include "signal.h"
-#include "configFileParser.h"
+
+#include "ReG_Steer_Tools.h"
 
 /*------------------------------------------------------------*/
 
@@ -123,7 +115,7 @@ int main(int argc, char **argv){
     }
   }
 
-  if(Get_tools_config(NULL, &conf) != REG_SUCCESS){
+  if(get_tools_config(NULL, &conf) != REG_SUCCESS){
     printf("WARNING: Failed to read tools.conf config. file\n");
   }
 
@@ -280,11 +272,11 @@ int main(int argc, char **argv){
     }
 
     soap_init(&mySoap);
-    if(Set_resource_property(&mySoap, EPR, job.userName, job.passphrase,
+    if(set_resource_property(&mySoap, EPR, job.userName, job.passphrase,
 			     buf) != REG_SUCCESS){
       fprintf(stderr, "Failed to initialize SWS with info. on data proxy :-(");
 
-      if(Destroy_WSRP(EPR, &sec) == REG_SUCCESS){
+      if(destroy_WSRP(EPR, &sec) == REG_SUCCESS){
 	fprintf(stderr, "  => Destroyed %s\n", EPR);
       }
       else{

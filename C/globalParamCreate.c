@@ -25,14 +25,8 @@
   DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
   CORRECTION.
 ---------------------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-#define WITH_CDATA /* To ensure gSoap retains CDATA sections */
-#include "ReG_Steer_types.h"
-#include "ReG_Steer_Browser.h"
-#include "ReG_Steer_Utils.h"
-#include "ReG_Steer_Steerside_WSRF.h"
-#include "soapH.h"
+
+#include "ReG_Steer_Tools.h"
 
 /*----------------------------------------------------------*/
 
@@ -76,7 +70,7 @@ int main(int argc, char **argv){
   }
 
   soap_init(&mySoap);
-  if( Get_resource_property (&mySoap,
+  if( get_resource_property (&mySoap,
                              parentEPR,
 			     username,
 			     passPtr,
@@ -120,7 +114,7 @@ int main(int argc, char **argv){
   }
 
   /* Now get details of the parent's children */
-  if( Get_resource_property (&mySoap,
+  if( get_resource_property (&mySoap,
                              parentEPR,
 			     username,
 			     passPtr,
@@ -154,7 +148,7 @@ int main(int argc, char **argv){
   for(i=0; i<count; i++){
     printf("Child %d EPR = %s\n", i, childEPR[i]);
 
-    if( Get_resource_property (&mySoap,
+    if( get_resource_property (&mySoap,
 			       childEPR[i],
 			       username,
 			       passPtr,

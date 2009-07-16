@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------
-  (C) Copyright 2006, University of Manchester, United Kingdom,
+  (C) Copyright 2009, University of Manchester, United Kingdom,
   all rights reserved.
 
   This software was developed by the RealityGrid project
@@ -25,7 +25,14 @@
   DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
   CORRECTION.
 ---------------------------------------------------------------------------*/
+
+#define WITH_CDATA /* To ensure gSoap retains CDATA sections */
+#include "ReG_Steer_Config.h"
 #include "ReG_Steer_types.h"
+#include "ReG_Steer_Browser.h"
+#include "ReG_Steer_Utils.h"
+#include "ReG_Steer_Steering_Transport_WSRF.h"
+#include "soapH.h"
 
 struct tool_conf {
   char registryEPR[REG_MAX_STRING_LENGTH];
@@ -38,5 +45,5 @@ struct tool_conf {
   char checkPointTree[REG_MAX_STRING_LENGTH];
 };
 
-int Get_tools_config(char *file,
-		     struct tool_conf *conf);
+int get_tools_config(char *file, struct tool_conf *conf);
+int update_tools_config(char *file, struct tool_conf *conf);

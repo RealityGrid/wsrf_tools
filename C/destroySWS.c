@@ -25,11 +25,8 @@
   DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
   CORRECTION.
 ---------------------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-#include "ReG_Steer_types.h"
-#include "ReG_Steer_Browser.h"
-#include "ReG_Steer_Utils_WSRF.h"
+
+#include "ReG_Steer_Tools.h"
 
 /*------------------------------------------------------------*/
 
@@ -55,7 +52,7 @@ int main(int argc, char **argv){
   for(i=1; i<argc; i+=2){
 
     strncpy(sec.passphrase, argv[i+1], REG_MAX_STRING_LENGTH);
-    if(Destroy_WSRP(argv[i], &sec) == REG_SUCCESS){
+    if(destroy_WSRP(argv[i], &sec) == REG_SUCCESS){
       printf("Destroyed %s\n", argv[i]);
     }
   }

@@ -25,14 +25,10 @@
   DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
   CORRECTION.
 ---------------------------------------------------------------------------*/
-#include <stdio.h>
-#include <string.h>
-#include "configFileParser.h"
-#include "ReG_Steer_types.h"
-#include "libxml/parser.h"
 
-int Get_tools_config(char *file,
-		     struct tool_conf *conf){
+#include "ReG_Steer_Tools.h"
+
+int get_tools_config(char *file, struct tool_conf *conf) {
   int        len;
   xmlDocPtr  doc;
   xmlNodePtr cur;
@@ -57,14 +53,14 @@ int Get_tools_config(char *file,
 
   doc = xmlParseFile(buf);
   if( !(cur = xmlDocGetRootElement(doc)) ){
-    fprintf(stderr, "Get_tools_config: error parsing xml from %s: "
+    fprintf(stderr, "get_tools_config: error parsing xml from %s: "
 	    "empty document\n", buf);
     xmlFreeDoc(doc);
     xmlCleanupParser();
     return REG_FAILURE;
   }
   if (xmlStrcmp(cur->name, (const xmlChar *) "ReGToolsConfig")){
-    fprintf(stderr, "Get_tools_config: error parsing xml from "
+    fprintf(stderr, "get_tools_config: error parsing xml from "
 	    "tools.conf: root element is not 'ReGToolsConfig'\n");
     return REG_FAILURE;
   }
@@ -182,8 +178,6 @@ int Get_tools_config(char *file,
 
 /*-----------------------------------------------------------------*/
 
-int Update_tools_config(char *file,
-			struct tool_conf *conf){
+int update_tools_config(char *file, struct tool_conf *conf) {
   return REG_SUCCESS;
 }
-

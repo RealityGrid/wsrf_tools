@@ -25,14 +25,8 @@
   DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
   CORRECTION.
 ---------------------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-#define WITH_CDATA /* To ensure gSoap retains CDATA sections */
-#include "ReG_Steer_types.h"
-#include "ReG_Steer_Browser.h"
-#include "ReG_Steer_Steerside_WSRF.h"
-#include "ReG_Steer_Utils.h"
-#include "soapH.h"
+
+#include "ReG_Steer_Tools.h"
 
 /*------------------------------------------------------------*/
 
@@ -65,7 +59,7 @@ int main(int argc, char **argv){
 			 "/etc/grid-security/certificates");
   }
 
-  Set_resource_property(&mySoap, EPR, getenv("USER"), 
+  set_resource_property(&mySoap, EPR, getenv("USER"), 
                         passphrase, msg);
 
   soap_end(&mySoap);

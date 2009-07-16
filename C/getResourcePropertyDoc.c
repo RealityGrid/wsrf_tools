@@ -25,14 +25,8 @@
   DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR
   CORRECTION.
 ---------------------------------------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
-#define WITH_CDATA /* To ensure gSoap retains CDATA sections */
-#include "soapH.h"
-#include "ReG_Steer_types.h"
-#include "ReG_Steer_Steerside.h"
-#include "ReG_Steer_Steerside_WSRF.h"
-#include "signal.h"
+
+#include "ReG_Steer_Tools.h"
 
 /*------------------------------------------------------------*/
 
@@ -84,7 +78,7 @@ int main(int argc, char **argv){
     return 1;
   }
 
-  Get_resource_property_doc(&mySoap,
+  get_resource_property_doc(&mySoap,
 			    argv[1],
 			    username,
 			    passPtr,
