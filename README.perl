@@ -1,29 +1,32 @@
-Introduction
-------------
+This software is the perl-based utilities for use with the WSRF-based
+version of the RealityGrid Steering Library
 
-This directory contains a variety of perl scripts used to interact with
-the WSRF-based framework for the RealityGrid computational steering
-system.  Due to the rather complex perl dependencies of these scripts
-they are intended for use in administration rather than day-to-day
-activities.  C-based utilities are available for doing the sorts of 
-tasks that the average user might wish to undertake.
- 
-Dependencies
-------------
+Research Computing Services, IT Services, University of Manchester.
+
+--------------------------------------------------------------------
+
+Prerequisites:
 
 The majority of the scripts require that WSRF::Lite (available from
-http://www.sve.man.ac.uk/Research/AtoZ/ILCT) and its associated
+CPAN, http://code.google.com/p/wsrflite or
+http://www.rcs.manchester.ac.uk/research/wsrflite) and its associated
 dependencies be installed.  See the WSRF::Lite README for details.
 
 You need to set this environment variable first:
 
-export WSRF_LOCATION=/path/to/WSRF-Lite
+export WSRF_LOCATION=/path/to/WSRF-Lite/lib
 
-The Scripts
------------
+The scripts:
 
-Below we describe each of the scripts (which are listed in alphabetical
-order).
+Due to the rather complex perl dependencies of these scripts they are
+intended for use in administration rather than day-to-day activities.
+The C-based tools may be better for doing the sorts of tasks that the
+average user might wish to undertake.
+
+Below we describe each of the scripts (which are listed in
+alphabetical order).
+
+---------------------
 
 addChkNode.pl <EPR of checkpoint node to add to>
 -------------
@@ -176,3 +179,10 @@ wsrf_updateResourceProperty.pl <EPR of service> <Property name> <New value>
 ------------------------------
 Script to update the value of an existing ResourceProperty of a
 WS-Resource.
+
+----------------------------------------------------------------------
+
+Any comments, enquiries or pleas for explanation should be directed to
+the comp-steering mailing list.  Details available from:
+
+http://listserv.manchester.ac.uk/cgi-bin/wa?A0=COMP-STEERING

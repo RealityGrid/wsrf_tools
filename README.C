@@ -1,38 +1,62 @@
-The directory containing this README should contain the source code for
-a number of utilities for use with the WSRF-based version of the
-RealityGrid steering library (www.realitygrid.org and 
-http://www.mc.manchester.ac.uk/research/projects/realitygrid).
+This software is the C-based utilities for use with the WSRF-based
+version of the RealityGrid Steering Library
+
+Research Computing Services, IT Services, University of Manchester.
 
 --------------------------------------------------------------------
-To build:
 
-You'll need the RealityGrid steering library installed somewhere
-on your machine.
+Prerequisites:
 
-Ensure that the REG_STEER_HOME environment variable holds the path to the
-steering library, e.g. ${HOME}/reg_steer_lib.
-(In bash:
-	export REG_STEER_HOME=${HOME}/reg_steer_lib 
-and in (t)csh:
-	setenv REG_STEER_HOME ${HOME}/reg_steer_lib
-.)
+RealityGrid Steering Library
 
-The Makefile is currently set up to use gcc.  If you're using some 
-other compiler you'll need to change it.
+CMake (see below) will find the Steering library on your machine if it
+has been installed in /usr/local or if you set the environment
+variable REG_HOME or REG_STEER_HOME to the path containing the lib and
+bin directories of the install or build.
 
-Type 'make'...
-Type 'make install'... this creates a 'tools.conf' file in ~/.realitygrid. 
-Edit this file to specify the location of the top-level job registry etc.
+You can also input the path by hand into CMake.
+
+The Steering Library *must* be built with the WSRF Steering Transport
+enabled, either as a module or built into a monolithic library.
+
+CMake
+
+The Steering library wrappers are built with an Open Source tool
+called CMake available from Kitware, Inc. It is available from here:
+http://www.cmake.org/ and is provided in a number of different
+flavours including Win32, Mac OS X, IRIX, AIX, Linux and source code.
+
+The Steering Library Wrappers require CMake version 2.6 or later.
+
+----------------------------------------------------------------------
+
+How to build and install:
+
+Please see the instructions that come with the Steering Library for
+how to use CMake.
+
+----------------------------------------------------------------------
+
+The WSRF Tools build options:
+
+REG_WSRF_TOOLS_INSTALL_TO_REG_DIR - default OFF
+
+If this is set to ON CMake will set CMAKE_INSTALL_PREFIX to match that
+which was used to install the Steering Library. This will ensure that
+the tools are installed to the same locations as the Steering Library.
 
 -------------------------------------------------------------------
+
 Certificates:
 
-gsoap requires that you combine your usercert.pem and userkey.pem
-into usercertandkey.pem (just cat them together, any order). All
-need to be in your ~/.globus directory.
+If you are using security (your container address starts with 'https')
+then gsoap requires that you combine your usercert.pem and userkey.pem
+into usercertandkey.pem (just cat them together, any order). All need
+to be in your ~/.globus directory.
 
 --------------------------------------------------------------------
-The utilities:
+
+The tools:
 
 ---------------------
 addUser
@@ -140,3 +164,10 @@ globalParamCreate
   N.B. This requires that the parent SWS have the parameter definitions from
   all of its children which in turn requires that all the children be up
   and running before this tool is used. 
+
+----------------------------------------------------------------------
+
+Any comments, enquiries or pleas for explanation should be directed to
+the comp-steering mailing list.  Details available from:
+
+http://listserv.manchester.ac.uk/cgi-bin/wa?A0=COMP-STEERING
