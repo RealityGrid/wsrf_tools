@@ -65,11 +65,11 @@ int main(int argc, char **argv){
     strncpy(input, passPtr, MAX_LEN);
     */
 
-    REG_Init_ssl_context(&mySoap,
-			 REG_TRUE,
-			 NULL,/* user's cert. & key file */
-			 NULL,/* Password to read key file */
-			 "/etc/grid-security/certificates");
+    init_ssl_context(&mySoap,
+		     REG_TRUE,
+		     NULL,/* user's cert. & key file */
+		     NULL,/* Password to read key file */
+		     "/etc/grid-security/certificates");
   }
 
   if( !(passPtr = getpass("Enter SWS password: ")) ){

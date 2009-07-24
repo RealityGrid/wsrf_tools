@@ -52,11 +52,11 @@ int main(int argc, char **argv){
   /* If address of SWS begins with 'https' then initialize SSL context */
   if( (strstr(EPR, "https") == EPR) ){
 
-    REG_Init_ssl_context(&mySoap,
-			 REG_TRUE, /* Authenticate SWS */
-			 NULL,/* user's cert. & key file */
-			 NULL,/* Password to read key file */
-			 "/etc/grid-security/certificates");
+    init_ssl_context(&mySoap,
+		     REG_TRUE, /* Authenticate SWS */
+		     NULL,/* user's cert. & key file */
+		     NULL,/* Password to read key file */
+		     "/etc/grid-security/certificates");
   }
 
   set_resource_property(&mySoap, EPR, getenv("USER"), 

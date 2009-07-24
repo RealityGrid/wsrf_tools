@@ -30,8 +30,8 @@
 #include "ReG_Steer_Config.h"
 #include "ReG_Steer_types.h"
 #include "ReG_Steer_Browser.h"
-#include "ReG_Steer_Utils.h"
 #include "ReG_Steer_Steering_Transport_WSRF.h"
+#include "ReG_Steer_WSRF_Utilities.h"
 #include "soapH.h"
 
 struct tool_conf {
