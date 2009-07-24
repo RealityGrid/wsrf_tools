@@ -14,8 +14,8 @@ use strict;
 #need to point to users certificates - these are only used
 #if https protocal is being used.
 $ENV{HTTPS_CA_DIR} = "/etc/grid-security/certificates/";
-#$ENV{HTTPS_CERT_FILE} = $ENV{HOME}."/.globus/usercert.pem";
-#$ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
+$ENV{HTTPS_CERT_FILE} = $ENV{HOME}."/.globus/usercert.pem";
+$ENV{HTTPS_KEY_FILE}  = $ENV{HOME}."/.globus/userkey.pem";
 
 if( @ARGV < 1 )
 {
